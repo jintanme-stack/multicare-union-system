@@ -826,6 +826,45 @@ export default function CaregiverDashboard() {
             </div>
 
             {formMode === 'list' && (
+              <div style={{
+                background: 'rgba(37,99,235,0.06)',
+                border: '1px solid rgba(37,99,235,0.2)',
+                borderRadius: '12px',
+                padding: '1.25rem 1.5rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ color: '#ffffff', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>🔗 Share Agreement Link with Client / 分享签署链接给病人</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Send this encrypted page URL to your client. Once they fill out their health profile and sign, it will dynamically register on your dashboard.
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    const link = window.location.origin + '/sign-agreement?caregiver=' + (member ? member.id : 'M-101');
+                    navigator.clipboard.writeText(link);
+                    alert('Signing Link copied to clipboard:\n' + link);
+                  }}
+                  className="btn btn-outline"
+                  style={{
+                    borderColor: 'var(--primary)',
+                    color: 'var(--primary)',
+                    padding: '0.5rem 1.25rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700
+                  }}
+                >
+                  📋 Copy Client Sign Link / 复制签署链接
+                </button>
+              </div>
+            )}
+
+            {formMode === 'list' && (
               <div className="card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
                 <table style={{ width: '100%', minWidth: '700px' }}>
                   <thead>
