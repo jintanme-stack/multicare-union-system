@@ -5,11 +5,47 @@ import { CreditCard, Calendar, Heart, Shield, RefreshCw, FileText, Download, Che
 import { store } from '@/lib/store';
 
 export default function CaregiverDashboard() {
-  const [activeTab, setActiveTab] = useState<'timeline' | 'vitals' | 'maternity' | 'library' | 'card'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'vitals' | 'maternity' | 'library' | 'card' | 'escortForm'>('timeline');
   const [selectedRole, setSelectedRole] = useState<'escort' | 'maternity' | 'elderly'>('elderly');
   const [member, setMember] = useState<any>(null);
   const [careRequests, setCareRequests] = useState<any[]>([]);
   const [libItems, setLibItems] = useState<any[]>([]);
+  const [escortForms, setEscortForms] = useState<any[]>([]);
+  
+  // Escort Form Mode and Fields
+  const [formMode, setFormMode] = useState<'list' | 'create' | 'view'>('list');
+  const [currentViewForm, setCurrentViewForm] = useState<any>(null);
+
+  const [formFullName, setFormFullName] = useState('');
+  const [formGender, setFormGender] = useState('Male');
+  const [formDob, setFormDob] = useState('');
+  const [formNric, setFormNric] = useState('');
+  const [formPhone, setFormPhone] = useState('');
+  const [formAddress, setFormAddress] = useState('');
+  const [formEmergencyName, setFormEmergencyName] = useState('');
+  const [formEmergencyPhone, setFormEmergencyPhone] = useState('');
+  const [formRelationship, setFormRelationship] = useState('');
+  const [formApptDate, setFormApptDate] = useState('');
+  const [formApptTime, setFormApptTime] = useState('');
+  const [formFacility, setFormFacility] = useState('');
+  const [formDoctor, setFormDoctor] = useState('');
+  const [formSpecialty, setFormSpecialty] = useState('');
+  const [formAssist, setFormAssist] = useState(false);
+  const [formComplaint, setFormComplaint] = useState('');
+  const [formHistory, setFormHistory] = useState<string[]>([]);
+  const [formDrugAllergy, setFormDrugAllergy] = useState('No Known Drug Allergy');
+  const [formFoodAllergy, setFormFoodAllergy] = useState('No');
+  const [formOtherAllergy, setFormOtherAllergy] = useState('No');
+  const [formTakingMeds, setFormTakingMeds] = useState(false);
+  const [formMedsList, setFormMedsList] = useState('');
+  const [formSurgicalHistory, setFormSurgicalHistory] = useState('');
+  const [formMobility, setFormMobility] = useState('Walk Independently');
+  const [formHearing, setFormHearing] = useState(false);
+  const [formSpeech, setFormSpeech] = useState(false);
+  const [formVisual, setFormVisual] = useState('');
+  const [formAdditional, setFormAdditional] = useState('');
+  const [formSigned, setFormSigned] = useState('');
+  const [formSignedDate, setFormSignedDate] = useState('');
 
   // Vitals State
   const [systolic, setSystolic] = useState('130');
@@ -54,6 +90,7 @@ export default function CaregiverDashboard() {
 
     setCareRequests(store.getCareRequests());
     setLibItems(store.getLibItems());
+    setEscortForms(store.getEscortForms());
   }, []);
 
   const submitVitals = (e: React.FormEvent) => {
@@ -80,6 +117,85 @@ export default function CaregiverDashboard() {
     };
     setConfinementLogs([newLog, ...confinementLogs]);
     alert('Confinement care log updated.');
+  };
+
+  const submitEscortForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formFullName.trim() || !formNric.trim() || !formSigned.trim()) {
+      alert('Please fill out all required fields (Full Name, NRIC/Passport, and Signature).');
+      return;
+    }
+    const newForm = {
+      id: 'FORM-' + Math.floor(102 + Math.random() * 900),
+      fullName: formFullName,
+      gender: formGender,
+      dob: formDob,
+      nric: formNric,
+      phone: formPhone,
+      address: formAddress,
+      emergencyName: formEmergencyName,
+      emergencyPhone: formEmergencyPhone,
+      relationship: formRelationship,
+      appointmentDate: formApptDate,
+      appointmentTime: formApptTime,
+      facility: formFacility,
+      doctor: formDoctor,
+      specialty: formSpecialty,
+      assistanceRequired: formAssist,
+      complaint: formComplaint,
+      pastHistory: formHistory,
+      drugAllergy: formDrugAllergy,
+      foodAllergy: formFoodAllergy,
+      otherAllergy: formOtherAllergy,
+      takingMeds: formTakingMeds,
+      medsList: formMedsList,
+      surgicalHistory: formSurgicalHistory,
+      mobility: formMobility,
+      hearingDifficulty: formHearing,
+      speechDifficulty: formSpeech,
+      visualImpairment: formVisual,
+      additionalInfo: formAdditional,
+      clientSigned: formSigned,
+      signedDate: formSignedDate || new Date().toISOString().split('T')[0]
+    };
+
+    const updated = [newForm, ...escortForms];
+    setEscortForms(updated);
+    store.setEscortForms(updated);
+
+    // Reset fields
+    setFormFullName('');
+    setFormDob('');
+    setFormNric('');
+    setFormPhone('');
+    setFormAddress('');
+    setFormEmergencyName('');
+    setFormEmergencyPhone('');
+    setFormRelationship('');
+    setFormApptDate('');
+    setFormApptTime('');
+    setFormFacility('');
+    setFormDoctor('');
+    setFormSpecialty('');
+    setFormAssist(false);
+    setFormComplaint('');
+    setFormHistory([]);
+    setFormDrugAllergy('No Known Drug Allergy');
+    setFormFoodAllergy('No');
+    setFormOtherAllergy('No');
+    setFormTakingMeds(false);
+    setFormMedsList('');
+    setFormSurgicalHistory('');
+    setFormMobility('Walk Independently');
+    setFormHearing(false);
+    setFormSpeech(false);
+    setFormVisual('');
+    setFormAdditional('');
+    setFormSigned('');
+    setFormSignedDate('');
+
+    setFormMode('list');
+    alert('Medical Escort Client Information Form and Agreement submitted successfully!');
   };
 
   return (
@@ -170,6 +286,18 @@ export default function CaregiverDashboard() {
                 style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
               >
                 <Activity size={18} /> Maternity Log
+              </button>
+            </li>
+          )}
+
+          {selectedRole === 'escort' && (
+            <li>
+              <button 
+                onClick={() => setActiveTab('escortForm')}
+                className={`sidebar-link ${activeTab === 'escortForm' ? 'active' : ''}`}
+                style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <FileText size={18} /> Escort Forms
               </button>
             </li>
           )}
@@ -673,6 +801,487 @@ export default function CaregiverDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'escortForm' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>Medical Escort Intake & Agreements / 陪诊服务建档协议</h2>
+                <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>Fill and manage Client Information Forms & Liability Agreements.</p>
+              </div>
+              {formMode === 'list' && (
+                <button 
+                  onClick={() => {
+                    setFormMode('create');
+                    setFormSignedDate(new Date().toISOString().split('T')[0]);
+                  }}
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--primary)', boxShadow: '0 2px 8px var(--primary-glow)' }}
+                >
+                  ➕ New Intake Form / 新建陪诊表单
+                </button>
+              )}
+            </div>
+
+            {formMode === 'list' && (
+              <div className="card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: '700px' }}>
+                  <thead>
+                    <tr>
+                      <th>Client Name</th>
+                      <th>Appointment</th>
+                      <th>Medical Facility</th>
+                      <th>Emergency Contact</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {escortForms.map((f: any) => (
+                      <tr key={f.id}>
+                        <td>
+                          <strong style={{ color: '#ffffff' }}>{f.fullName}</strong>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.gender} &bull; {f.nric}</div>
+                        </td>
+                        <td>
+                          <span style={{ color: '#ffffff', fontWeight: 600 }}>{f.appointmentDate}</span>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>🕒 {f.appointmentTime}</div>
+                        </td>
+                        <td>
+                          <span style={{ color: '#ffffff' }}>{f.facility}</span>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.specialty} ({f.doctor || 'N/A'})</div>
+                        </td>
+                        <td>
+                          <span style={{ color: '#ffffff' }}>{f.emergencyName}</span>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>📞 {f.emergencyPhone} ({f.relationship})</div>
+                        </td>
+                        <td>
+                          <button 
+                            onClick={() => {
+                              setCurrentViewForm(f);
+                              setFormMode('view');
+                            }}
+                            className="btn btn-outline"
+                            style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                          >
+                            🔍 View & Sign / 详情与协议
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {formMode === 'view' && currentViewForm && (
+              <div>
+                <button 
+                  onClick={() => setFormMode('list')}
+                  className="btn btn-outline"
+                  style={{ marginBottom: '1.5rem', padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
+                >
+                  ← Back to List / 返回列表
+                </button>
+
+                <div className="card animate-fade-in" style={{ padding: '3rem', background: '#0f172a', borderColor: 'rgba(255,255,255,0.08)', color: '#cbd5e1', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
+                  {/* Digital Signature & Form Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <img src="/mcsa-logo.png" alt="MCSA" style={{ width: '50px', height: '50px', backgroundColor: 'white', borderRadius: '50%', padding: '2px' }} />
+                      <div>
+                        <h3 style={{ color: '#ffffff', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Medical Escort Client Record / 陪诊档案资料</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Document ID:</span>
+                      <div style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--accent)' }}>{currentViewForm.id}</div>
+                    </div>
+                  </div>
+
+                  <h2 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '2rem', fontFamily: 'Outfit' }}>📝 Medical Escort Service – Client Information Form</h2>
+
+                  {/* Section 1 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>1. Personal Information / 个人信息</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
+                      <div><strong>Full Name / 姓名:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.fullName}</span></div>
+                      <div><strong>Gender / 性别:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.gender}</span></div>
+                      <div><strong>Date of Birth / 出生日期:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.dob || 'N/A'}</span></div>
+                      <div><strong>NRIC or Passport / 证件号:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.nric}</span></div>
+                      <div><strong>Contact Number / 电话:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.phone || 'N/A'}</span></div>
+                      <div><strong>Home Address / 地址:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.address || 'N/A'}</span></div>
+                      <div><strong>Emergency Contact / 紧急联系人:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.emergencyName || 'N/A'}</span></div>
+                      <div><strong>Emergency Phone / 联系电话:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.emergencyPhone || 'N/A'}</span></div>
+                      <div><strong>Relationship / 关系:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.relationship || 'N/A'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Section 2 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>2. Escort Service Details / 陪诊服务详情</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
+                      <div><strong>Appointment Date / 就诊日期:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.appointmentDate || 'N/A'}</span></div>
+                      <div><strong>Appointment Time / 就诊时间:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.appointmentTime || 'N/A'}</span></div>
+                      <div><strong>Medical Facility / 就诊医院:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.facility || 'N/A'}</span></div>
+                      <div><strong>Doctor Name / 医生姓名:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.doctor || 'N/A'}</span></div>
+                      <div><strong>Department or Specialty / 科室:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.specialty || 'N/A'}</span></div>
+                      <div><strong>Admin Tasks Required / 协助取药/付款/登记:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.assistanceRequired ? 'Yes / 是' : 'No / 否'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Section 3 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>3. Health & Medical History / 健康与既往病史</h4>
+                    <div style={{ fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div><strong>Main Complaint / 就诊主诉:</strong> <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.25rem 0 0 0' }}>{currentViewForm.complaint || 'N/A'}</p></div>
+                      <div>
+                        <strong>Past Medical History / 既往病史:</strong>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                          {currentViewForm.pastHistory && currentViewForm.pastHistory.length > 0 ? (
+                            currentViewForm.pastHistory.map((h: string, i: number) => (
+                              <span key={i} className="badge badge-active" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}>{h}</span>
+                            ))
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>None / 无</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>4. Allergy Information / 过敏史</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', fontSize: '0.9rem' }}>
+                      <div><strong>Drug Allergies / 药物过敏:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.drugAllergy}</span></div>
+                      <div><strong>Food Allergies / 食物过敏:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.foodAllergy}</span></div>
+                      <div><strong>Other Allergies / 其他过敏:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.otherAllergy}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Section 5 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>5. Current Medication / 当前用药情况</h4>
+                    <div style={{ fontSize: '0.9rem' }}>
+                      <strong>Taking medications or supplements / 是否正在服药:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.takingMeds ? 'Yes / 是' : 'No / 否'}</span>
+                      {currentViewForm.takingMeds && (
+                        <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.4rem 0 0 0', whiteSpace: 'pre-wrap' }}>{currentViewForm.medsList}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section 6 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>6. Surgical History / 手术史</h4>
+                    <div style={{ fontSize: '0.9rem' }}>
+                      <strong>History of surgeries or procedures / 手术史:</strong>
+                      <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.4rem 0 0 0' }}>{currentViewForm.surgicalHistory || 'No / 无'}</p>
+                    </div>
+                  </div>
+
+                  {/* Section 7 */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>7. Functional & Mobility Assessment / 行动与感官功能评估</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
+                      <div><strong>Mobility Difficulty / 行动评估:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.mobility}</span></div>
+                      <div><strong>Hearing Difficulties / 听力困难:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.hearingDifficulty ? 'Yes / 有' : 'No / 无'}</span></div>
+                      <div><strong>Speech Difficulties / 语言困难:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.speechDifficulty ? 'Yes / 有' : 'No / 无'}</span></div>
+                      <div><strong>Visual Impairment / 视力受损情况:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.visualImpairment || 'No / 无'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Section 8 */}
+                  <div style={{ marginBottom: '2.5rem' }}>
+                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>8. Additional Information / 额外备注</h4>
+                    <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: 0 }}>{currentViewForm.additionalInfo || 'None / 无'}</p>
+                  </div>
+
+                  {/* Escort Authorization & Liability Agreement (陪诊协议条款) */}
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', marginBottom: '2.5rem', fontSize: '0.85rem' }}>
+                    <h3 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '1.5rem', fontFamily: 'Outfit' }}>🤝 Medical Escort Service Authorization & Liability Agreement / 陪诊服务协议与责任告知书</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '1rem', borderRadius: '8px', background: '#0b1329' }}>
+                      <p><strong>第一条 服务内容 / Article 1 Service Scope</strong><br />
+                      乙方仅提供非医疗类流程协助，包括：陪同挂号、排队、缴费、检查引导、取药、办理出入院手续、送检、引导路线、协助沟通。<br />
+                      Provider only provides non-medical process assistance, including escorting registration, queuing, payment, examination guidance, medication collection, admission/discharge procedures, sample delivery, route guidance, and communication assistance.</p>
+                      <p><strong>第二条 医疗行为禁止声明 / Article 2 Prohibition of Medical Practice</strong><br />
+                      1. 乙方并非马来西亚注册医生、护士或医护人员，严禁从事任何医疗行为，否则属违法。<br />
+                      Provider is not a registered medical practitioner, nurse or healthcare personnel in Malaysia. Any medical practice is strictly prohibited and illegal.<br />
+                      2. 甲方确认：陪诊员无权替代医生/护士提供任何医疗判断或治疗。<br />
+                      Client confirms that the escort has no authority to replace doctors/nurses for any medical judgment or treatment.</p>
+                      <p><strong>第三条 医疗文件代签授权与限制 / Article 3 Authorization & Restriction for Signing</strong><br />
+                      1. 甲方许可书面授权乙方代签纯行政/非医疗文件，仅限登记表等。<br />
+                      Client may authorize Provider in writing to sign pure administrative/non-medical documents only.<br />
+                      2. 乙方绝对不得代签：手术同意书、麻醉同意书、侵入性检查同意书等涉及医疗决策的文件。<br />
+                      Provider SHALL NOT sign any surgery consent, anesthesia consent, invasive procedure consent, or any medical decision-related documents.</p>
+                      <p><strong>第四条 紧急情况处理 / Article 4 Emergency Procedure</strong><br />
+                      1. 服务期间如发生突发疾病、晕倒等急症，乙方仅可立即呼叫医院医护/急诊，不做任何医疗处置。<br />
+                      In case of sudden illness, Provider shall immediately call hospital staff/emergency department and shall not perform any medical intervention.<br />
+                      2. 乙方可协助联系甲方紧急联系人，但不承担医疗决策责任。<br />
+                      Provider may assist to contact Client's emergency contact but shall not bear medical decision-making liability.</p>
+                      <p><strong>第五条 风险告知与责任免除 / Article 5 Risk Disclosure & Liability Exclusion</strong><br />
+                      陪诊服务不改变病情发展，因自身疾病、隐瞒病史等后果，乙方不承担责任。<br />
+                      Escort service does not change medical condition. Provider is not liable for any consequences caused by own illness, withheld medical history, or allergy.</p>
+                      <p><strong>第六条 个人数据保护 (PDPA 2010) / Article 6 Personal Data Protection</strong><br />
+                      双方遵守马来西亚《2010年个人数据保护法》(PDPA 2010)。患者健康及个人信息属于敏感敏感数据，仅限本次服务使用，服务结束后不予留存。<br />
+                      Both Parties comply with Personal Data Protection Act 2010 (PDPA 2010). Patient health and personal data are sensitive and used only for this service.</p>
+                    </div>
+                  </div>
+
+                  {/* Declaration & Signatures */}
+                  <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '1.5rem', fontSize: '0.9rem' }}>
+                    <p style={{ fontStyle: 'italic', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+                      "I hereby confirm that the information provided above is true and accurate. I understand that the information will be used solely for medical escort service coordination. / 我在此确认上述提供的信息真实准确。我明白此信息将仅用于陪诊服务协调及紧急救援目的。"
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Client Digital Signature / 甲方客户签字</span>
+                        <div style={{ fontSize: '1.3rem', fontFamily: 'Outfit, sans-serif', fontStyle: 'italic', fontWeight: 'bold', color: 'var(--accent)', margin: '0.75rem 0' }}>
+                          ✍️ {currentViewForm.clientSigned}
+                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Signed Date / 签署日期: {currentViewForm.signedDate}</span>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Escort Service Provider / 乙方陪诊师确认</span>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#60a5fa', margin: '0.9rem 0' }}>
+                          🛡️ {member ? member.name : 'Li Xiulan'}
+                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Status / 执照状态: Active Licensed Vetted</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formMode === 'create' && (
+              <div>
+                <button 
+                  onClick={() => setFormMode('list')}
+                  className="btn btn-outline"
+                  style={{ marginBottom: '1.5rem', padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
+                >
+                  ← Back to List / 返回列表
+                </button>
+
+                <div className="card" style={{ maxWidth: '800px', margin: '0 auto', padding: '2.5rem' }}>
+                  <h3 style={{ color: '#ffffff', marginBottom: '1.5rem', textAlign: 'center' }}>📋 Fill New Client Escort Intake Form</h3>
+                  <form onSubmit={submitEscortForm}>
+                    
+                    {/* Section 1 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>1. Personal Information / 个人基本信息</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label className="form-label">Full Name / 客户姓名 *</label>
+                          <input type="text" required className="form-input" placeholder="e.g. Grandpa Zhang" value={formFullName} onChange={(e) => setFormFullName(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Gender / 性别</label>
+                          <select className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }} value={formGender} onChange={(e) => setFormGender(e.target.value)}>
+                            <option value="Male">Male / 男</option>
+                            <option value="Female">Female / 女</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Date of Birth / 出生日期</label>
+                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formDob} onChange={(e) => setFormDob(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">NRIC or Passport / 证件号 *</label>
+                          <input type="text" required className="form-input" placeholder="e.g. 480312-14-5567" value={formNric} onChange={(e) => setFormNric(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Contact Phone / 联系电话</label>
+                          <input type="text" className="form-input" placeholder="e.g. 012-3344556" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} />
+                        </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label className="form-label">Home Address / 住宅地址</label>
+                          <input type="text" className="form-input" placeholder="e.g. 22, Jalan Bukit Bintang, KL" value={formAddress} onChange={(e) => setFormAddress(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Emergency Contact Name / 紧急联系人</label>
+                          <input type="text" className="form-input" placeholder="e.g. Zhang Wei" value={formEmergencyName} onChange={(e) => setFormEmergencyName(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Emergency Contact Phone / 紧急电话</label>
+                          <input type="text" className="form-input" placeholder="e.g. 019-8765432" value={formEmergencyPhone} onChange={(e) => setFormEmergencyPhone(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Relationship / 与客户关系</label>
+                          <input type="text" className="form-input" placeholder="e.g. Son" value={formRelationship} onChange={(e) => setFormRelationship(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>2. Escort Service Details / 就诊陪护详情</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label className="form-label">Appointment Date / 就诊日期</label>
+                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formApptDate} onChange={(e) => setFormApptDate(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Appointment Time / 就诊时间</label>
+                          <input type="time" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formApptTime} onChange={(e) => setFormApptTime(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Medical Facility / 医院或诊所</label>
+                          <input type="text" className="form-input" placeholder="e.g. Hospital Kuala Lumpur" value={formFacility} onChange={(e) => setFormFacility(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Doctor Name / 医生姓名</label>
+                          <input type="text" className="form-input" placeholder="e.g. Dr. Tan" value={formDoctor} onChange={(e) => setFormDoctor(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Department or Specialty / 科室名称</label>
+                          <input type="text" className="form-input" placeholder="e.g. Cardiology Dept" value={formSpecialty} onChange={(e) => setFormSpecialty(e.target.value)} />
+                        </div>
+                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <label className="form-label">Need administrative help? / 是否需协助缴费/取药/办手续</label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginTop: '0.4rem' }}>
+                            <input type="checkbox" style={{ width: '18px', height: '18px' }} checked={formAssist} onChange={(e) => setFormAssist(e.target.checked)} />
+                            <span>Yes, assistance required / 需要协助</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>3. Health & Medical History / 健康主诉与病史</h4>
+                      <div className="form-group">
+                        <label className="form-label">Main Complaint or Reason for Consultation / 就诊主诉与原因</label>
+                        <textarea className="form-input" placeholder="Describe current symptoms or consultation purpose..." rows={3} style={{ resize: 'vertical' }} value={formComplaint} onChange={(e) => setFormComplaint(e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Past Medical History / 既往病史 (Select all that apply)</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.65rem', marginTop: '0.5rem' }}>
+                          {['Hypertension', 'Diabetes', 'Heart Disease', 'Stroke', 'Cancer', 'Kidney Disease', 'Asthma', 'Mental Health Condition', 'Dementia / Alzheimer\'s Disease', 'Parkinson\'s Disease'].map((cond) => (
+                            <label key={cond} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', fontSize: '0.85rem', cursor: 'pointer' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={formHistory.includes(cond)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormHistory([...formHistory, cond]);
+                                  } else {
+                                    setFormHistory(formHistory.filter(h => h !== cond));
+                                  }
+                                }}
+                              />
+                              <span>{cond}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 4 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>4. Allergy Information / 过敏信息</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label className="form-label">Drug Allergies / 药物过敏史</label>
+                          <input type="text" className="form-input" placeholder="e.g. No Known Drug Allergy or penicillin (hives)" value={formDrugAllergy} onChange={(e) => setFormDrugAllergy(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Food Allergies / 食物过敏史</label>
+                          <input type="text" className="form-input" placeholder="e.g. No or Peanuts (anaphylaxis)" value={formFoodAllergy} onChange={(e) => setFormFoodAllergy(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Other Allergies / 其它过敏（如乳胶等）</label>
+                          <input type="text" className="form-input" placeholder="e.g. No or Latex (skin rash)" value={formOtherAllergy} onChange={(e) => setFormOtherAllergy(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 5 & 6 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>5. Current Medication & Surgeries / 用药与手术史</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                            <input type="checkbox" checked={formTakingMeds} onChange={(e) => setFormTakingMeds(e.target.checked)} />
+                            <strong className="form-label" style={{ margin: 0 }}>Currently taking medication or supplements / 正在服用药物或保健品</strong>
+                          </label>
+                          {formTakingMeds && (
+                            <textarea className="form-input" placeholder="List medications with dosage & frequency (e.g. Metformin 500mg - 1x daily)" rows={3} style={{ resize: 'vertical' }} value={formMedsList} onChange={(e) => setFormMedsList(e.target.value)} />
+                          )}
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Surgical History / 手术或医疗史</label>
+                          <input type="text" className="form-input" placeholder="e.g. Knee Replacement (2020), Heart Bypass (2022) or No" value={formSurgicalHistory} onChange={(e) => setFormSurgicalHistory(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 7 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>6. Functional & Mobility Assessment / 行动与日常功能评估</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group">
+                          <label className="form-label">Mobility Difficulties / 行动困难评估</label>
+                          <select className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }} value={formMobility} onChange={(e) => setFormMobility(e.target.value)}>
+                            <option value="Walk Independently">Walk Independently / 独立行走</option>
+                            <option value="Require Walking Stick">Require Walking Stick / 需拐杖</option>
+                            <option value="Require Walker">Require Walker / 需助行架</option>
+                            <option value="Wheelchair User">Wheelchair User / 轮椅使用者</option>
+                            <option value="Require Assistance Walking">Require Assistance Walking / 需助行</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.4rem' }}>
+                            <input type="checkbox" checked={formHearing} onChange={(e) => setFormHearing(e.target.checked)} />
+                            <span>Hearing difficulties / 听力障碍</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={formSpeech} onChange={(e) => setFormSpeech(e.target.checked)} />
+                            <span>Speech difficulties / 语言沟通障碍</span>
+                          </label>
+                        </div>
+                        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                          <label className="form-label">Visual Impairment / 视力障碍描述 (if any)</label>
+                          <input type="text" className="form-input" placeholder="e.g. Cataract in right eye, or No" value={formVisual} onChange={(e) => setFormVisual(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 8 Form */}
+                    <div style={{ marginBottom: '2rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>7. Additional Information / 其他特别备注</h4>
+                      <div className="form-group">
+                        <textarea className="form-input" placeholder="Any specific requirements or instructions for our medical escort..." rows={2} style={{ resize: 'vertical' }} value={formAdditional} onChange={(e) => setFormAdditional(e.target.value)} />
+                      </div>
+                    </div>
+
+                    {/* Signature */}
+                    <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
+                      <p style={{ fontSize: '0.82rem', margin: '0 0 1rem 0', color: 'var(--text-muted)' }}>
+                        * Agreement Terms Declaration: I hereby authorize MCSA companion to assist during hospital outpatient activities. I confirm that all medical history is accurate.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label">Client Digital Signature (Type Name) *</label>
+                          <input type="text" required className="form-input" placeholder="Client signature name" value={formSigned} onChange={(e) => setFormSigned(e.target.value)} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label">Signed Date</label>
+                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formSignedDate} onChange={(e) => setFormSignedDate(e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: 'var(--primary)', boxShadow: '0 2px 8px var(--primary-glow)' }}>
+                      💾 Submit Intake Form & Sign Agreement
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

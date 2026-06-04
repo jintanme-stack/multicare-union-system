@@ -115,6 +115,42 @@ const defaultActivityPhotos = [
   { id: 'PHOTO-3', url: '/activity-grad.jpg', caption: 'Companion Course Graduation Ceremony' }
 ];
 
+const defaultEscortForms = [
+  {
+    id: 'FORM-101',
+    fullName: 'Grandpa Zhang',
+    gender: 'Male',
+    dob: '1948-03-12',
+    nric: '480312-14-5567',
+    phone: '012-3344556',
+    address: '22, Jalan Bukit Bintang, Kuala Lumpur',
+    emergencyName: 'Zhang Wei',
+    emergencyPhone: '019-8765432',
+    relationship: 'Son',
+    appointmentDate: '2026-06-04',
+    appointmentTime: '10:30',
+    facility: 'Hospital Kuala Lumpur (HKL)',
+    doctor: 'Dr. Tan',
+    specialty: 'Cardiology',
+    assistanceRequired: true,
+    complaint: 'Chest discomfort and occasional palpitation during mild exercise.',
+    pastHistory: ['Hypertension', 'Diabetes', 'Heart Disease'],
+    drugAllergy: 'No Known Drug Allergy',
+    foodAllergy: 'No',
+    otherAllergy: 'No',
+    takingMeds: true,
+    medsList: 'Metformin 500mg (1x daily), Amlodipine 5mg (1x daily)',
+    surgicalHistory: 'Angioplasty (2022, HKL)',
+    mobility: 'Walk Independently',
+    hearingDifficulty: false,
+    speechDifficulty: false,
+    visualImpairment: 'Mild cataract in left eye',
+    additionalInfo: 'Needs help navigating HKL cardiology clinic building escalators.',
+    clientSigned: 'Grandpa Zhang',
+    signedDate: '2026-06-03'
+  }
+];
+
 // Helper to check window environment
 const isClient = () => typeof window !== 'undefined';
 
@@ -162,5 +198,8 @@ export const store = {
   setAnnouncements: (announcements: any) => setStore('mcsa_announcements', announcements),
 
   getActivityPhotos: () => getStore('mcsa_activity_photos', defaultActivityPhotos),
-  setActivityPhotos: (photos: any) => setStore('mcsa_activity_photos', photos)
+  setActivityPhotos: (photos: any) => setStore('mcsa_activity_photos', photos),
+
+  getEscortForms: () => getStore('mcsa_escort_forms', defaultEscortForms),
+  setEscortForms: (forms: any) => setStore('mcsa_escort_forms', forms)
 };
