@@ -54,6 +54,7 @@ export default function CaregiverDashboard() {
 
     setCareRequests(store.getCareRequests());
     setLibItems(store.getLibItems());
+  }, []);
 
   const submitVitals = (e: React.FormEvent) => {
     e.preventDefault();

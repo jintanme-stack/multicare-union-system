@@ -244,7 +244,7 @@ export default function VerifyPage() {
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Expiration</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{member.expiry}</span>
                       </div>
-                    </div> </div>
+                    </div>
                   </div>
 
                   {/* Profile Details Sheet */}
