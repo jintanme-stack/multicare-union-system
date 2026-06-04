@@ -1,21 +1,34 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, ExternalLink, Menu, X } from 'lucide-react';
+import { store } from '@/lib/store';
+import { translations, Language } from '@/lib/translations';
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [lang, setLang] = useState<Language>('en');
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
 
+  useEffect(() => {
+    setLang(store.getLanguage() as Language);
+  }, []);
+
+  const handleLangChange = (newLang: Language) => {
+    store.setLanguage(newLang);
+    setLang(newLang);
+    window.location.reload();
+  };
+
+  const t = translations[lang] || translations.en;
+
   const navLinks = [
-    { label: 'Home', href: '/' },
-    { label: 'About', href: '/about' },
-    { label: 'Services', href: '/services' },
-    { label: 'Find Caregivers', href: '/find-caregivers' },
-    { label: 'Verify Member', href: '/verify' },
-    { label: 'Membership', href: '/membership' },
-    { label: 'Contact', href: '/contact' },
-    { label: 'Register as Caregiver', href: '/register', highlight: true }
+    { label: t.nav.home, href: '/' },
+    { label: t.nav.about, href: '/about' },
+    { label: t.nav.services, href: '/services' },
+    { label: t.nav.verify, href: '/verify' },
+    { label: t.nav.membership, href: '/membership' },
+    { label: t.register.title || 'Apply License', href: '/register', highlight: true }
   ];
 
   return (
@@ -55,13 +68,13 @@ export default function Navbar() {
       </div>
 
       {/* Desktop Menu */}
-      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }} className="desktop-nav">
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }} className="desktop-nav">
         {navLinks.map((link) => (
           <a
             key={link.href}
             href={link.href}
             style={{
-              fontSize: '0.88rem',
+              fontSize: '0.85rem',
               fontWeight: 600,
               textDecoration: 'none',
               color: currentPath === link.href ? '#ffffff' : 'var(--text-muted)',
@@ -88,16 +101,46 @@ export default function Navbar() {
           href="/login"
           className="btn btn-primary"
           style={{
-            padding: '0.5rem 1.1rem',
-            fontSize: '0.85rem',
+            padding: '0.4rem 1rem',
+            fontSize: '0.82rem',
             borderRadius: '8px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.3rem'
           }}
         >
-          Portal Login <ExternalLink size={14} />
+          {t.nav.portalLogin} <ExternalLink size={14} />
         </a>
+
+        {/* Language Switcher Selector */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
+          <select 
+            value={lang} 
+            onChange={(e) => handleLangChange(e.target.value as Language)}
+            style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.7)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              padding: '0.35rem 0.6rem',
+              color: '#ffffff',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              outline: 'none',
+              appearance: 'none',
+              backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 8px center',
+              backgroundSize: '12px',
+              paddingRight: '24px'
+            }}
+          >
+            <option value="en" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>EN</option>
+            <option value="bm" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>BM</option>
+            <option value="zh" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>中文</option>
+          </select>
+        </div>
       </div>
     </nav>
   );

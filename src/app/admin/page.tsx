@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Briefcase, DollarSign, BookOpen, MessageSquare, Check, X, Award, FileText, Send, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Shield, Users, Briefcase, DollarSign, BookOpen, MessageSquare, Check, X, Award, FileText, Send, CheckCircle2, AlertCircle, Megaphone } from 'lucide-react';
 import { store } from '@/lib/store';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'cases' | 'inquiries' | 'library'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'cases' | 'inquiries' | 'library' | 'announcements'>('overview');
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [docTab, setDocTab] = useState<'cert' | 'health'>('cert');
   
@@ -17,10 +17,22 @@ export default function AdminPage() {
   const [newLibTitle, setNewLibTitle] = useState('');
   const [newLibType, setNewLibType] = useState('PDF Document');
 
+  // Announcements & Activity Photos States
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annCategory, setAnnCategory] = useState('Training');
+  const [annContent, setAnnContent] = useState('');
+
+  const [activityPhotos, setActivityPhotos] = useState<any[]>([]);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoCaption, setPhotoCaption] = useState('');
+
   useEffect(() => {
     setPendingMembers(store.getPendingMembers());
     setInquiries(store.getInquiries());
     setLibItems(store.getLibItems());
+    setAnnouncements(store.getAnnouncements());
+    setActivityPhotos(store.getActivityPhotos());
   }, []);
 
   const approveMember = (id: string, name: string) => {
@@ -78,6 +90,54 @@ export default function AdminPage() {
     alert('Published new library file to caregiver databases.');
   };
 
+  const publishAnnouncement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!annTitle.trim() || !annContent.trim()) return;
+    const newAnn = {
+      id: 'ANN-' + Math.floor(101 + Math.random() * 900),
+      title: annTitle,
+      category: annCategory,
+      date: new Date().toISOString().split('T')[0],
+      content: annContent
+    };
+    const updated = [newAnn, ...announcements];
+    store.setAnnouncements(updated);
+    setAnnouncements(updated);
+    setAnnTitle('');
+    setAnnContent('');
+    alert('Published announcement successfully!');
+  };
+
+  const deleteAnnouncement = (id: string) => {
+    const updated = announcements.filter(a => a.id !== id);
+    store.setAnnouncements(updated);
+    setAnnouncements(updated);
+    alert('Announcement deleted.');
+  };
+
+  const addActivityPhoto = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!photoUrl.trim() || !photoCaption.trim()) return;
+    const newPhoto = {
+      id: 'PHOTO-' + Math.floor(101 + Math.random() * 900),
+      url: photoUrl,
+      caption: photoCaption
+    };
+    const updated = [...activityPhotos, newPhoto];
+    store.setActivityPhotos(updated);
+    setActivityPhotos(updated);
+    setPhotoUrl('');
+    setPhotoCaption('');
+    alert('Activity photo added to public galleries.');
+  };
+
+  const deleteActivityPhoto = (id: string) => {
+    const updated = activityPhotos.filter(p => p.id !== id);
+    store.setActivityPhotos(updated);
+    setActivityPhotos(updated);
+    alert('Activity photo removed.');
+  };
+
   return (
     <div className="app-container" style={{ background: '#0b1329' }}>
       {/* Sidebar with Glassmorphic design */}
@@ -129,6 +189,15 @@ export default function AdminPage() {
               style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
             >
               <BookOpen size={18} /> Library SOPs
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => setActiveTab('announcements')}
+              className={`sidebar-link ${activeTab === 'announcements' ? 'active' : ''}`}
+              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+            >
+              <Megaphone size={18} /> Announcements & Photos
             </button>
           </li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem' }}>
@@ -409,6 +478,143 @@ export default function AdminPage() {
                         style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
                       >
                         Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'announcements' && (
+          <div>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Announcements & Activities Hub</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Publish new union-wide notifications and register dynamic training activity photos.</p>
+
+            <div className="grid-cols-2">
+              {/* Form 1: Announcements */}
+              <div className="card">
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Publish Announcement</h3>
+                <form onSubmit={publishAnnouncement}>
+                  <div className="form-group">
+                    <label className="form-label">Announcement Title</label>
+                    <input 
+                      type="text" 
+                      required 
+                      className="form-input" 
+                      placeholder="e.g. Mandatory Training Seminar"
+                      value={annTitle}
+                      onChange={(e) => setAnnTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Category</label>
+                    <select 
+                      className="form-input"
+                      style={{ background: 'var(--bg-input)', color: 'white', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
+                      value={annCategory}
+                      onChange={(e) => setAnnCategory(e.target.value)}
+                    >
+                      <option value="Training">Training</option>
+                      <option value="Union News">Union News</option>
+                      <option value="General Notification">General Notification</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Content Description</label>
+                    <textarea 
+                      required 
+                      className="form-input" 
+                      style={{ minHeight: '100px', resize: 'vertical' }}
+                      placeholder="Enter the notice details here..."
+                      value={annContent}
+                      onChange={(e) => setAnnContent(e.target.value)}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+                    📢 Publish Announcement
+                  </button>
+                </form>
+              </div>
+
+              {/* Form 2: Activity Photos */}
+              <div className="card">
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Add Activity Gallery Photo</h3>
+                <form onSubmit={addActivityPhoto}>
+                  <div className="form-group">
+                    <label className="form-label">Photo Image URL</label>
+                    <input 
+                      type="text" 
+                      required 
+                      className="form-input" 
+                      placeholder="e.g. /activity-center.jpg or custom HTTPS URL"
+                      value={photoUrl}
+                      onChange={(e) => setPhotoUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Caption / Description</label>
+                    <input 
+                      type="text" 
+                      required 
+                      className="form-input" 
+                      placeholder="e.g. Practical Skills Assessment Room"
+                      value={photoCaption}
+                      onChange={(e) => setPhotoCaption(e.target.value)}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+                    📸 Add Gallery Image
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '2.5rem' }} className="grid-cols-2">
+              {/* Display list of announcements */}
+              <div className="card">
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Current Published Announcements</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {announcements.map((ann) => (
+                    <div key={ann.id} style={{ border: '1px solid var(--border)', padding: '1rem', borderRadius: '10px', background: 'rgba(255,255,255,0.01)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <strong style={{ color: '#ffffff', fontSize: '0.95rem', display: 'block' }}>{ann.title}</strong>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{ann.category} &bull; {ann.date}</div>
+                        </div>
+                        <button 
+                          onClick={() => deleteAnnouncement(ann.id)}
+                          className="btn btn-outline" 
+                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', borderColor: 'var(--danger)', color: 'var(--danger)', flexShrink: 0 }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>{ann.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Display list of activity photos */}
+              <div className="card">
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Current Gallery Photos</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1rem' }}>
+                  {activityPhotos.map((photo) => (
+                    <div key={photo.id} style={{ border: '1px solid var(--border)', padding: '0.5rem', borderRadius: '10px', background: 'rgba(255,255,255,0.01)', position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <div style={{ width: '100%', height: '80px', borderRadius: '6px', overflow: 'hidden', backgroundColor: '#1e293b' }}>
+                        <img src={photo.url} alt={photo.caption} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {photo.caption}
+                      </span>
+                      <button 
+                        onClick={() => deleteActivityPhoto(photo.id)}
+                        className="btn btn-outline" 
+                        style={{ padding: '0.15rem 0.4rem', fontSize: '0.7rem', borderColor: 'var(--danger)', color: 'var(--danger)', width: '100%', marginTop: 'auto' }}
+                      >
+                        Remove
                       </button>
                     </div>
                   ))}

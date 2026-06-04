@@ -92,6 +92,29 @@ const defaultLibItems = [
   { id: 'LIB-100', title: 'Tung Shin Hospital Outpatient Care Checklist SOP', type: 'Image Map', size: '890 KB' }
 ];
 
+const defaultAnnouncements = [
+  {
+    id: 'ANN-1',
+    title: 'MCSA Professional Caregiver Training Registrations Open',
+    category: 'Training',
+    date: '2026-06-04',
+    content: 'Advanced companion care and infant nursing classes are open. Certification is jointly issued by Caredemy.'
+  },
+  {
+    id: 'ANN-2',
+    title: 'Mandatory Caregiver Health Clearance Updates',
+    category: 'Union News',
+    date: '2026-05-28',
+    content: 'All active union caregivers must submit updated TB tests and background clearances by June 30th to maintain active status.'
+  }
+];
+
+const defaultActivityPhotos = [
+  { id: 'PHOTO-1', url: '/activity-center.jpg', caption: 'MCSA Training Base - Caregiver Practical Training Room' },
+  { id: 'PHOTO-2', url: '/activity-cert.jpg', caption: 'Competency Vetting - Clinical Skill Assessments' },
+  { id: 'PHOTO-3', url: '/activity-grad.jpg', caption: 'Companion Course Graduation Ceremony' }
+];
+
 // Helper to check window environment
 const isClient = () => typeof window !== 'undefined';
 
@@ -111,6 +134,15 @@ export const setStore = (key: string, val: any) => {
 };
 
 export const store = {
+  getLanguage: () => {
+    if (!isClient()) return 'en';
+    return localStorage.getItem('mcsa_lang') || 'en';
+  },
+  setLanguage: (lang: string) => {
+    if (!isClient()) return;
+    localStorage.setItem('mcsa_lang', lang);
+  },
+
   getPendingMembers: () => getStore('mcsa_pending', defaultPendingMembers),
   setPendingMembers: (members: any) => setStore('mcsa_pending', members),
   
@@ -124,5 +156,11 @@ export const store = {
   setCareRequests: (requests: any) => setStore('mcsa_care_requests', requests),
   
   getLibItems: () => getStore('mcsa_lib_items', defaultLibItems),
-  setLibItems: (items: any) => setStore('mcsa_lib_items', items)
+  setLibItems: (items: any) => setStore('mcsa_lib_items', items),
+
+  getAnnouncements: () => getStore('mcsa_announcements', defaultAnnouncements),
+  setAnnouncements: (announcements: any) => setStore('mcsa_announcements', announcements),
+
+  getActivityPhotos: () => getStore('mcsa_activity_photos', defaultActivityPhotos),
+  setActivityPhotos: (photos: any) => setStore('mcsa_activity_photos', photos)
 };

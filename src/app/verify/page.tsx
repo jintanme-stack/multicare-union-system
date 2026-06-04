@@ -4,15 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { store } from '@/lib/store';
+import { translations, Language } from '@/lib/translations';
 import { Shield, Search, CheckCircle, AlertTriangle, Calendar, User, FileCheck, HelpCircle } from 'lucide-react';
 
 export default function VerifyPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [member, setMember] = useState<any>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [lang, setLang] = useState<Language>('en');
 
   useEffect(() => {
-    // Check if there is an ID in the URL params for quick linking
+    setLang(store.getLanguage() as Language);
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if (id) {
@@ -36,7 +38,6 @@ export default function VerifyPage() {
     handleSearch(searchQuery);
   };
 
-  // Mask helper for sensitive info on public checks
   const maskPhone = (phone: string) => {
     if (!phone) return '';
     return phone.slice(0, 3) + '-****' + phone.slice(-3);
@@ -49,12 +50,13 @@ export default function VerifyPage() {
     return parts[0].slice(0, 2) + '***@' + parts[1];
   };
 
+  const t = translations[lang] || translations.en;
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0b1329', color: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
 
       <main style={{ flex: 1, padding: '4rem 2rem', position: 'relative' }}>
-        {/* Glow ambient */}
         <div style={{
           position: 'absolute',
           top: '10%',
@@ -72,13 +74,13 @@ export default function VerifyPage() {
         <div style={{ maxWidth: '700px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <span className="badge badge-active" style={{ marginBottom: '1rem', padding: '0.4rem 1rem' }}>
-              🛡️ Live Licensure Lookup
+              🛡️ {lang === 'zh' ? '实时资质在线核验' : lang === 'bm' ? 'Semakan Lesen Kesatuan Serta-Merta' : 'Live Licensure Lookup'}
             </span>
             <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>
-              Verify MCSA Member Credentials
+              {t.verify.title}
             </h1>
             <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              Enter a Caregiver's Membership ID (e.g. <code>MCSA-2026-0009</code>) to verify their union accreditation, health clearances, and active clinical registration.
+              {t.verify.subtitle}
             </p>
           </div>
 
@@ -92,13 +94,13 @@ export default function VerifyPage() {
                   required
                   className="form-input"
                   style={{ width: '100%', paddingLeft: '48px', height: '52px' }}
-                  placeholder="Enter MCSA serial, e.g. MCSA-2026-0009"
+                  placeholder={t.verify.inputPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <button type="submit" className="btn btn-primary" style={{ padding: '0 2rem', height: '52px', borderRadius: '12px' }}>
-                Search
+                {t.verify.searchBtn}
               </button>
             </form>
           </div>
@@ -154,6 +156,7 @@ export default function VerifyPage() {
                         style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'white', padding: '1px' }} 
                       />
                     </div>
+                    
                     {/* Chip & Photo Row */}
                     <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', margin: '0.5rem 0' }}>
                       {/* Photo box */}
@@ -202,14 +205,14 @@ export default function VerifyPage() {
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <div>
                           <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
-                            Membership ID
+                            {lang === 'zh' ? '会员执照编号' : lang === 'bm' ? 'ID Keahlian' : 'Membership ID'}
                           </span>
                           <span style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.05em' }}>
                             {member.member_number}
                           </span>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Specialty</span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>{t.verify.specialty}</span>
                           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>
                             {member.category}
                           </span>
@@ -219,7 +222,7 @@ export default function VerifyPage() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <div>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Holder Name</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>{t.verify.holderName}</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>{member.name}</span>
                       </div>
                       
@@ -237,11 +240,11 @@ export default function VerifyPage() {
                         marginRight: 'auto',
                         marginLeft: '1rem'
                       }}>
-                        ✓ Active Vetted
+                        ✓ {t.verify.activeStatus}
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Expiration</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>{t.verify.expiration}</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{member.expiry}</span>
                       </div>
                     </div>
@@ -252,41 +255,41 @@ export default function VerifyPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
                       <CheckCircle size={24} style={{ color: 'var(--health)' }} />
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Accreditation Status: Active & Valid</h3>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Last synced with registration database minutes ago</p>
+                        <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{t.verify.accreditationTitle}</h3>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.verify.accreditationDesc}</p>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Full Name</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.holderName}</span>
                           <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.name}</strong>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Registry Category</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{lang === 'zh' ? '登记类目' : lang === 'bm' ? 'Kategori Daftar' : 'Registry Category'}</span>
                           <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.category}</strong>
                         </div>
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Primary Location</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.primaryLocation}</span>
                           <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.location || 'Kuala Lumpur'}</strong>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Professional Experience</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.experience}</span>
                           <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.exp}</strong>
                         </div>
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Contact Email (Masked)</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.maskedEmail}</span>
                           <span style={{ fontSize: '1rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{maskEmail(member.email)}</span>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Phone Number (Masked)</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.maskedPhone}</span>
                           <span style={{ fontSize: '1rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{maskPhone(member.phone)}</span>
                         </div>
                       </div>
@@ -294,7 +297,7 @@ export default function VerifyPage() {
                       <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.15)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', marginTop: '0.5rem' }}>
                         <FileCheck size={20} style={{ color: 'var(--health)', flexShrink: 0, marginTop: '2px' }} />
                         <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.4 }}>
-                          <strong>Accreditation Auditing Verification:</strong> This member has successfully passed background screening, identity confirmation, and professional caregiver vetting. Their license is verified to prioritize outpatient scheduling in Partner Hospitals.
+                          <strong>{t.verify.adviceTitle}</strong> {t.verify.adviceDesc}
                         </div>
                       </div>
                     </div>
@@ -305,9 +308,9 @@ export default function VerifyPage() {
                 /* Not Found State */
                 <div className="card" style={{ padding: '2.5rem', textAlign: 'center', borderColor: 'var(--danger)', borderLeft: '4px solid var(--danger)' }}>
                   <AlertTriangle size={48} style={{ color: 'var(--danger)', margin: '0 auto 1rem auto' }} />
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Membership Card / License Not Found</h3>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{t.verify.notFoundTitle}</h3>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5, maxWidth: '500px', margin: '0 auto 1.5rem auto' }}>
-                    The Membership ID <code>{searchQuery}</code> was not found in the MCSA active union registry. This could be due to a pending audit status or invalid credentials.
+                    {t.verify.notFoundDesc} (<code>{searchQuery}</code>)
                   </p>
                   <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                     <button 
@@ -315,10 +318,10 @@ export default function VerifyPage() {
                       className="btn btn-outline" 
                       style={{ fontSize: '0.85rem' }}
                     >
-                      Clear Search
+                      {t.verify.clearBtn}
                     </button>
                     <a href="/contact" className="btn btn-primary" style={{ fontSize: '0.85rem' }}>
-                      Contact Audit Desk
+                      {t.verify.contactBtn}
                     </a>
                   </div>
                 </div>

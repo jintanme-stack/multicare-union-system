@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Key, Mail, Eye, EyeOff } from 'lucide-react';
 import { store } from '@/lib/store';
+import { translations, Language } from '@/lib/translations';
 
 export default function EntryPage() {
   const [selectedRole, setSelectedRole] = useState<'admin' | 'member' | 'client'>('member');
@@ -11,6 +12,11 @@ export default function EntryPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lang, setLang] = useState<Language>('en');
+
+  useEffect(() => {
+    setLang(store.getLanguage() as Language);
+  }, []);
 
   const handleMockLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +29,7 @@ export default function EntryPage() {
         if (password === 'Drjin3194') {
           window.location.href = '/admin';
         } else {
-          setErrorMessage('Incorrect admin code. Access denied.');
+          setErrorMessage(lang === 'zh' ? '管理员授权密码错误，拒接访问。' : lang === 'bm' ? 'Kod pentadbir salah. Akses ditolak.' : 'Incorrect admin code. Access denied.');
         }
       } else if (selectedRole === 'member') {
         if (password === '123456') {
@@ -33,23 +39,24 @@ export default function EntryPage() {
           if (found) {
             localStorage.setItem('mcsa_logged_member', JSON.stringify(found));
           } else {
-            // Default to Li Xiulan if not explicitly matched, or if email was left blank
             localStorage.setItem('mcsa_logged_member', JSON.stringify(members[0]));
           }
           window.location.href = '/dashboard';
         } else {
-          setErrorMessage('Invalid member credentials. Check MCSA registry records.');
+          setErrorMessage(lang === 'zh' ? '会员验证凭证无效，请核对工会名册记录。' : lang === 'bm' ? 'Kredensial ahli tidak sah. Periksa rekod MCSA.' : 'Invalid member credentials. Check MCSA registry records.');
         }
       } else {
         if (email.trim() !== '') {
           localStorage.setItem('mcsa_client_email', email);
           window.location.href = '/portal';
         } else {
-          setErrorMessage('Please enter your client reference email.');
+          setErrorMessage(lang === 'zh' ? '请输入您的客户联络电子邮箱。' : lang === 'bm' ? 'Sila masukkan e-mel rujukan pelanggan.' : 'Please enter your client reference email.');
         }
       }
     }, 800);
   };
+
+  const t = translations[lang] || translations.en;
 
   return (
     <div style={{
@@ -106,7 +113,7 @@ export default function EntryPage() {
         {/* Back Link to Public Site */}
         <div style={{ textAlign: 'left', marginBottom: '1rem' }}>
           <a href="/" style={{ color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>
-            ← Back to Public Website
+            ← {lang === 'zh' ? '返回官方首页' : lang === 'bm' ? 'Kembali ke Laman Utama' : 'Back to Public Website'}
           </a>
         </div>
 
@@ -127,7 +134,7 @@ export default function EntryPage() {
             }} 
           />
           <h2 style={{ fontSize: '1.6rem', color: '#ffffff', fontFamily: 'Outfit, sans-serif', fontWeight: 800 }}>
-            MultiCare Support Malaysia Union
+            {lang === 'zh' ? 'MCSA 马来西亚护理工会' : 'MultiCare Support Malaysia Union'}
           </h2>
           <span style={{ 
             fontSize: '0.8rem', 
@@ -138,7 +145,7 @@ export default function EntryPage() {
             display: 'block',
             marginTop: '0.4rem'
           }}>
-            Private Union Registry
+            {lang === 'zh' ? '工会内部管理与验证门户' : lang === 'bm' ? 'PORTAL DAFTAR SWASTA' : 'Private Union Registry'}
           </span>
         </div>
 
@@ -167,7 +174,7 @@ export default function EntryPage() {
               transition: 'all 0.25s ease'
             }}
           >
-            Care Member
+            {t.login.memberTab}
           </button>
           <button
             onClick={() => { setSelectedRole('admin'); setErrorMessage(''); }}
@@ -185,7 +192,7 @@ export default function EntryPage() {
               transition: 'all 0.25s ease'
             }}
           >
-            Union Admin
+            {t.login.adminTab}
           </button>
           <button
             onClick={() => { setSelectedRole('client'); setErrorMessage(''); }}
@@ -203,14 +210,14 @@ export default function EntryPage() {
               transition: 'all 0.25s ease'
             }}
           >
-            Family Portal
+            {lang === 'zh' ? '患者家属' : lang === 'bm' ? 'Portal Keluarga' : 'Family Portal'}
           </button>
         </div>
 
         <form onSubmit={handleMockLogin} style={{ textAlign: 'left' }}>
           {selectedRole !== 'admin' && (
             <div className="form-group">
-              <label className="form-label">Email or Member ID</label>
+              <label className="form-label">{lang === 'zh' ? '邮箱或会员执照编号' : lang === 'bm' ? 'E-mel atau ID Ahli' : 'Email or Member ID'}</label>
               <div style={{ position: 'relative' }}>
                 <Mail size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
                 <input
@@ -227,7 +234,7 @@ export default function EntryPage() {
           )}
           {selectedRole === 'admin' && (
             <div className="form-group">
-              <label className="form-label">Admin Registry Email</label>
+              <label className="form-label">{lang === 'zh' ? '工会管理员邮箱' : lang === 'bm' ? 'E-mel Pentadbir' : 'Admin Registry Email'}</label>
               <div style={{ position: 'relative' }}>
                 <Mail size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
                 <input
@@ -244,7 +251,7 @@ export default function EntryPage() {
           )}
 
           <div className="form-group">
-            <label className="form-label">Secure Access Key (Password)</label>
+            <label className="form-label">{t.login.passLabel}</label>
             <div style={{ position: 'relative' }}>
               <Key size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
               <input
@@ -298,7 +305,7 @@ export default function EntryPage() {
             className="btn btn-primary pulse-glow"
             style={{ width: '100%', marginTop: '0.75rem', height: '48px', borderRadius: '12px' }}
           >
-            {isSubmitting ? 'Verifying Registry Database...' : '🔐 Verify & Authorize Access'}
+            {isSubmitting ? (lang === 'zh' ? '正在核验注册名录...' : 'Verifying Registry Database...') : `🔐 ${lang === 'zh' ? '授权并进入信息门户' : 'Verify & Authorize Access'}`}
           </button>
         </form>
 
@@ -311,7 +318,7 @@ export default function EntryPage() {
           borderRadius: '12px',
           border: '1px solid rgba(255,255,255,0.03)'
         }}>
-          🛡️ Private Union Portal Credentials Vetted:<br/>
+          🛡️ {lang === 'zh' ? '工会安全凭证快速指南：' : lang === 'bm' ? 'Panduan Kelayakan Portal Kesatuan:' : 'Private Union Portal Credentials Vetted:'}<br/>
           <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '0.5rem' }}>
             <span>Admin Key: <strong style={{ color: 'var(--accent)' }}>Drjin3194</strong></span>
             <span>Caregiver Key: <strong style={{ color: 'var(--accent)' }}>123456</strong></span>

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { store } from '@/lib/store';
+import { translations, Language } from '@/lib/translations';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 
 export default function Footer() {
@@ -9,6 +10,13 @@ export default function Footer() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [lang, setLang] = useState<Language>('en');
+
+  useEffect(() => {
+    setLang(store.getLanguage() as Language);
+  }, []);
+
+  const t = translations[lang] || translations.en;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,12 +31,11 @@ export default function Footer() {
     };
     store.setInquiries([newInquiry, ...inquiries]);
     
-    // Also push to Real-time Operations log if needed by writing an alert
     setName('');
     setEmail('');
     setMessage('');
     setSubmitted(true);
-    alert('Thank you! Your inquiry has been logged in our registry database. A support representative will reach out.');
+    alert(lang === 'zh' ? '谢谢！您的咨询已被记录到后台数据库中。客服代表将尽快联系您。' : lang === 'bm' ? 'Terima kasih! Pertanyaan anda telah direkodkan dalam pangkalan data. Wakil sokongan akan menghubungi anda.' : 'Thank you! Your inquiry has been logged in our registry database. A support representative will reach out.');
     setTimeout(() => setSubmitted(false), 3000);
   };
 
@@ -66,7 +73,7 @@ export default function Footer() {
             </div>
           </div>
           <p style={{ lineHeight: 1.6, marginBottom: '1.5rem' }}>
-            Accrediting and verifying professional care providers across Malaysia. Connecting families with qualified caregivers, confinement specialists, patient companions, and rehab assistants.
+            {t.footer.desc}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={16} /> KL Sentral Business Suites, Kuala Lumpur</span>
@@ -78,28 +85,27 @@ export default function Footer() {
         {/* Links column */}
         <div>
           <h4 style={{ color: '#ffffff', fontSize: '1.1rem', marginBottom: '1.2rem', fontFamily: 'Outfit' }}>
-            Directory & Portals
+            {t.footer.quickLinks}
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <li><a href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Home / 首页</a></li>
-            <li><a href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>About Association / 关于工会</a></li>
-            <li><a href="/services" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Care Services / 护理服务</a></li>
-            <li><a href="/find-caregivers" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Registry Search / 寻找护理员</a></li>
-            <li><a href="/verify" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Verify Licensure / 卡号验证</a></li>
-            <li><a href="/membership" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Membership / 加入工会</a></li>
+            <li><a href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.home}</a></li>
+            <li><a href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.about}</a></li>
+            <li><a href="/services" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.services}</a></li>
+            <li><a href="/verify" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.verify}</a></li>
+            <li><a href="/membership" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.membership}</a></li>
           </ul>
         </div>
 
         {/* Quick Query column */}
         <div>
           <h4 style={{ color: '#ffffff', fontSize: '1.1rem', marginBottom: '1.2rem', fontFamily: 'Outfit' }}>
-            Quick Support Query / 客服咨询
+            {lang === 'zh' ? '客服咨询' : lang === 'bm' ? 'Pertanyaan Sokongan Segera' : 'Quick Support Query'}
           </h4>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <input
               type="text"
               required
-              placeholder="Your Name / 您的姓名"
+              placeholder={lang === 'zh' ? '您的姓名' : lang === 'bm' ? 'Nama Anda' : 'Your Name'}
               style={{
                 padding: '0.65rem 0.85rem',
                 borderRadius: '6px',
@@ -112,9 +118,9 @@ export default function Footer() {
               onChange={(e) => setName(e.target.value)}
             />
             <input
-              type="email"
+              type="text"
               required
-              placeholder="Contact Email or Phone / 联系方式"
+              placeholder={lang === 'zh' ? '联系方式 (电话 / 邮箱)' : lang === 'bm' ? 'Telefon atau E-mel' : 'Contact Email or Phone'}
               style={{
                 padding: '0.65rem 0.85rem',
                 borderRadius: '6px',
@@ -129,7 +135,7 @@ export default function Footer() {
             <textarea
               required
               rows={3}
-              placeholder="Your inquiry details... / 咨询内容..."
+              placeholder={lang === 'zh' ? '咨询内容描述...' : lang === 'bm' ? 'Butiran pertanyaan anda...' : 'Your inquiry details...'}
               style={{
                 padding: '0.65rem 0.85rem',
                 borderRadius: '6px',
@@ -152,7 +158,7 @@ export default function Footer() {
                 justifyContent: 'center'
               }}
             >
-              <Send size={14} /> Submit Query to Admin
+              <Send size={14} /> {lang === 'zh' ? '提交咨询给后台' : lang === 'bm' ? 'Hantar Pertanyaan' : 'Submit Query to Admin'}
             </button>
           </form>
         </div>
@@ -167,7 +173,7 @@ export default function Footer() {
         fontSize: '0.8rem',
         color: 'var(--text-muted)'
       }}>
-        &copy; {new Date().getFullYear()} MultiCare Support Malaysia Union (MCSA). All rights reserved. Registered Association registry under Malaysia MOH compliance.
+        {t.footer.copyright}
       </div>
     </footer>
   );

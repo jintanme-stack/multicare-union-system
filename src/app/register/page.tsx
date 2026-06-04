@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { store } from '@/lib/store';
+import { translations, Language } from '@/lib/translations';
 import { Shield, PlusCircle, CheckCircle, FileText, UploadCloud, AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -20,6 +21,11 @@ export default function RegisterPage() {
   
   const [submitted, setSubmitted] = useState(false);
   const [assignedAppId, setAssignedAppId] = useState('');
+  const [lang, setLang] = useState<Language>('en');
+
+  useEffect(() => {
+    setLang(store.getLanguage() as Language);
+  }, []);
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,12 +54,13 @@ export default function RegisterPage() {
     setSubmitted(true);
   };
 
+  const t = translations[lang] || translations.en;
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0b1329', color: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
 
       <main style={{ flex: 1, padding: '4rem 2rem', position: 'relative' }}>
-        {/* Glow ambient */}
         <div style={{
           position: 'absolute',
           top: '5%',
@@ -88,24 +95,24 @@ export default function RegisterPage() {
               </div>
               
               <h2 style={{ fontSize: '1.8rem', color: '#ffffff', marginBottom: '0.75rem' }}>
-                Application Queued for Vetting
+                {t.register.successTitle}
               </h2>
               <span className="badge badge-pending" style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', marginBottom: '1.5rem' }}>
-                Application ID: {assignedAppId}
+                {lang === 'zh' ? '申请案号' : lang === 'bm' ? 'ID Permohonan' : 'Application ID'}: {assignedAppId}
               </span>
 
               <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: '600px', margin: '0 auto 2rem auto', fontSize: '0.95rem' }}>
-                Thank you for applying to MultiCare Support Malaysia Union (MCSA). Your qualifications, NRIC credentials, and medical/TB diagnostics files are queued in our private administrator vetting deck.
+                {t.register.successDesc}
                 <br /><br />
-                Once approved, a digital membership card and barcode registry ID will be generated, and your secure portal login password (<code>123456</code>) will activate.
+                {lang === 'zh' ? '一经审核通过，系统将自动生成您的电子会员卡及执业二维码。同时激活您的会员信息门户登录密码 (123456)。' : lang === 'bm' ? 'Setelah diluluskan, kad keahlian digital dan kod bar ID daftar akan dijana, dan kata laluan portal anda (123456) akan diaktifkan.' : 'Once approved, a digital membership card and barcode registry ID will be generated, and your secure portal login password (123456) will activate.'}
               </p>
 
               <div style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center' }}>
                 <a href="/" className="btn btn-outline" style={{ fontSize: '0.9rem' }}>
-                  Return Home
+                  {lang === 'zh' ? '返回首页' : lang === 'bm' ? 'Kembali Utama' : 'Return Home'}
                 </a>
                 <a href="/login" className="btn btn-primary" style={{ fontSize: '0.9rem' }}>
-                  Go to Member Portal Login
+                  {lang === 'zh' ? '前往会员登录' : lang === 'bm' ? 'Log Masuk Portal' : 'Go to Member Portal Login'}
                 </a>
               </div>
             </div>
@@ -114,25 +121,25 @@ export default function RegisterPage() {
             <div>
               <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
                 <span className="badge badge-pending" style={{ marginBottom: '1rem', padding: '0.4rem 1rem' }}>
-                  ✍️ Professional Onboarding Form
+                  ✍️ {lang === 'zh' ? '专业照护执业申请表' : lang === 'bm' ? 'Borang Onboarding Profesional' : 'Professional Onboarding Form'}
                 </span>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '0.75rem' }}>
-                  Register as an MCSA Caregiver
+                  {t.register.title}
                 </h1>
                 <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Join Malaysia's unified union registry. Fill out your certifications, professional categories, and health declarations below to submit for audit.
+                  {t.register.subtitle}
                 </p>
               </div>
 
               <div className="card">
                 <form onSubmit={handleRegister}>
                   <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
-                    1. Identity & Contact Details
+                    1. {lang === 'zh' ? '基本身份信息' : lang === 'bm' ? 'Maklumat Identiti & Perhubungan' : 'Identity & Contact Details'}
                   </h3>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
-                      <label className="form-label">Full Name (Matching NRIC/Passport)</label>
+                      <label className="form-label">{t.register.fullName}</label>
                       <input
                         type="text"
                         required
@@ -143,7 +150,7 @@ export default function RegisterPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Email Address</label>
+                      <label className="form-label">{t.register.email}</label>
                       <input
                         type="email"
                         required
@@ -157,7 +164,7 @@ export default function RegisterPage() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
-                      <label className="form-label">Contact Phone Number</label>
+                      <label className="form-label">{t.register.phone}</label>
                       <input
                         type="text"
                         required
@@ -168,7 +175,7 @@ export default function RegisterPage() {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Preferred Work Location (City, State)</label>
+                      <label className="form-label">{t.register.location}</label>
                       <input
                         type="text"
                         required
@@ -181,44 +188,44 @@ export default function RegisterPage() {
                   </div>
 
                   <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
-                    2. Caregiver Accreditation Details
+                    2. {lang === 'zh' ? '护理师专业资质登记' : lang === 'bm' ? 'Butiran Pentauliahan Penjaga' : 'Caregiver Accreditation Details'}
                   </h3>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
-                      <label className="form-label">Accreditation Category</label>
+                      <label className="form-label">{t.register.category}</label>
                       <select
                         className="form-input"
                         style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
                       >
-                        <option value="Confinement Care">🍼 Confinement Lady (月嫂)</option>
-                        <option value="Patient Companion">🏥 Patient Companion (陪诊人员)</option>
-                        <option value="Elderly Caregiver">👴 Elderly Caregiver (养老护理员)</option>
-                        <option value="Rehabilitation Care Assistant">💪 Rehabilitation Therapist (康复助理)</option>
+                        <option value="Confinement Care">🍼 {lang === 'zh' ? 'Confinement Lady (月嫂)' : lang === 'bm' ? 'Penjaga Berpantang (Materniti)' : 'Confinement Lady'}</option>
+                        <option value="Patient Companion">🏥 {lang === 'zh' ? 'Patient Companion (陪诊人员)' : lang === 'bm' ? 'Peneman Pesakit' : 'Patient Companion'}</option>
+                        <option value="Elderly Caregiver">👴 {lang === 'zh' ? 'Elderly Caregiver (养老护理员)' : lang === 'bm' ? 'Penjaga Warga Emas' : 'Elderly Caregiver'}</option>
+                        <option value="Rehabilitation Care Assistant">💪 {lang === 'zh' ? 'Rehabilitation Therapist (康复助理)' : lang === 'bm' ? 'Pembantu Rehab' : 'Rehab Assistant'}</option>
                       </select>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Years of Experience</label>
+                      <label className="form-label">{t.register.experience}</label>
                       <select
                         className="form-input"
                         style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
                         value={exp}
                         onChange={(e) => setExp(e.target.value)}
                       >
-                        <option value="1 yr">1 Year</option>
-                        <option value="2 yrs">2 Years</option>
-                        <option value="3 yrs">3 Years</option>
-                        <option value="5 yrs">5 Years</option>
-                        <option value="8 yrs">8 Years</option>
-                        <option value="10 yrs+">10+ Years</option>
+                        <option value="1 yr">1 {lang === 'zh' ? '年' : 'Year'}</option>
+                        <option value="2 yrs">2 {lang === 'zh' ? '年' : 'Years'}</option>
+                        <option value="3 yrs">3 {lang === 'zh' ? '年' : 'Years'}</option>
+                        <option value="5 yrs">5 {lang === 'zh' ? '年' : 'Years'}</option>
+                        <option value="8 yrs">8 {lang === 'zh' ? '年' : 'Years'}</option>
+                        <option value="10 yrs+">10+ {lang === 'zh' ? '年' : 'Years'}</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Professional Statement & Bio Description</label>
+                    <label className="form-label">{t.register.bio}</label>
                     <textarea
                       required
                       rows={4}
@@ -231,7 +238,7 @@ export default function RegisterPage() {
                   </div>
 
                   <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
-                    3. Passport Photo Identity / 证件照片
+                    3. {t.register.presetPhoto}
                   </h3>
 
                   <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', marginBottom: '2rem' }}>
@@ -276,7 +283,7 @@ export default function RegisterPage() {
 
                     {/* Presets and URL select */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <label className="form-label">Select Professional Headshot Preset</label>
+                      <label className="form-label">{lang === 'zh' ? '选择专业职业半身照预设' : lang === 'bm' ? 'Pilih Potret Pilihan' : 'Select Professional Headshot Preset'}</label>
                       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                         {[
                           { name: 'Preset A (Malay Female)', url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?q=80&w=256&h=256&fit=crop' },
@@ -296,7 +303,7 @@ export default function RegisterPage() {
                         ))}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Or enter custom image URL:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'zh' ? '或输入自定义头像链接：' : lang === 'bm' ? 'Atau masukkan URL imej:' : 'Or enter custom image URL:'}</span>
                         <input
                           type="text"
                           className="form-input"
@@ -310,12 +317,12 @@ export default function RegisterPage() {
                   </div>
 
                   <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
-                    4. Credentials & Diagnostics Attachments
+                    4. {lang === 'zh' ? '学术资格与体检诊断附件' : lang === 'bm' ? 'Sijil & Dokumen Lampiran Kesihatan' : 'Credentials & Diagnostics Attachments'}
                   </h3>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
-                      <label className="form-label">Professional Certification File Name</label>
+                      <label className="form-label">{lang === 'zh' ? '专业资格证书文件名称' : lang === 'bm' ? 'Nama Fail Sijil Kecekapan' : 'Professional Certification File Name'}</label>
                       <div style={{ position: 'relative' }}>
                         <FileText size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
                         <input
@@ -327,11 +334,11 @@ export default function RegisterPage() {
                           onChange={(e) => setProof(e.target.value)}
                         />
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Provide document filename (e.g. Doula_Diploma.pdf)</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'zh' ? '提供证明文件全称 (例: Certification.pdf)' : lang === 'bm' ? 'Nama fail dokumen (cth: Sijil_Kecemerlangan.pdf)' : 'Provide document filename (e.g. Doula_Diploma.pdf)'}</span>
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">TB & Medical Clearance Record Name</label>
+                      <label className="form-label">{lang === 'zh' ? '肺结核体检诊断合格报告名称' : lang === 'bm' ? 'Nama Fail Laporan Kesihatan / TB' : 'TB & Medical Clearance Record Name'}</label>
                       <div style={{ position: 'relative' }}>
                         <FileText size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
                         <input
@@ -343,19 +350,19 @@ export default function RegisterPage() {
                           onChange={(e) => setHealthCert(e.target.value)}
                         />
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Provide health diagnostic record (e.g. HKL_Medical_Report.pdf)</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'zh' ? '提供体检合格证全称 (例: TB_Clearance.pdf)' : lang === 'bm' ? 'Nama fail laporan perubatan (cth: Rekod_Kesihatan.pdf)' : 'Provide health diagnostic record (e.g. HKL_Medical_Report.pdf)'}</span>
                     </div>
                   </div>
 
                   <div style={{ background: 'rgba(245, 158, 11, 0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.15)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', margin: '1.5rem 0' }}>
                     <AlertCircle size={20} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '2px' }} />
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.4 }}>
-                      <strong>Licensure Fee Requirement:</strong> Submitting this registration queues you in the vetting list. Once the admin audits your files and details, approval generates a membership ID. A RM350 annual licensing fee is billed upon card issuance.
+                      <strong>{lang === 'zh' ? '执照年费核发提示：' : lang === 'bm' ? 'Keperluan Yuran Lesen Kesatuan:' : 'Licensure Fee Requirement:'}</strong> {lang === 'zh' ? '提交注册表后，您将进入资质核验队列。一旦管理员审核批准通过，系统将向您核发会员 ID，并于发卡时收取 RM350 的年度执照年费。' : lang === 'bm' ? 'Menghantar permohonan ini meletakkan anda dalam antrean tapisan. Setelah diluluskan oleh admin, yuran lesen RM350 akan dikenakan.' : 'Submitting this registration queues you in the vetting list. Once the admin audits your files and details, approval generates a membership ID. A RM350 annual licensing fee is billed upon card issuance.'}
                     </div>
                   </div>
 
                   <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', height: '48px' }}>
-                    📢 Submit Registry Onboarding
+                    📢 {t.register.submitBtn}
                   </button>
                 </form>
               </div>
