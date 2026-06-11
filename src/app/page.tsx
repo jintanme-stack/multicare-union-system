@@ -137,8 +137,8 @@ export default function HomePage() {
               zIndex: 0
             }}></div>
             <img 
-              src="/malaysian-care-hero.png" 
-              alt="Malaysian Diverse Care" 
+              src="/malaysian-care-real.png" 
+              alt="Malaysian Diverse Care Group" 
               style={{
                 width: '100%',
                 maxWidth: '460px',

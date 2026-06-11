@@ -50,11 +50,11 @@ export default function ServicesPage() {
 
       <section style={{
         padding: '5rem 2rem',
-        background: 'radial-gradient(circle at top, rgba(37,99,235,0.12) 0%, transparent 60%)',
+        background: 'radial-gradient(circle at top, rgba(10,186,181,0.12) 0%, transparent 60%)',
         textAlign: 'center'
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1.25rem', fontFamily: 'Outfit' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1.25rem', fontFamily: 'Outfit', color: '#0f172a' }}>
             {t.services.title}
           </h1>
           <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
@@ -69,31 +69,31 @@ export default function ServicesPage() {
           margin: '0 auto',
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '2rem'
+          gap: '2.5rem'
         }}>
           {serviceDetails.map((service, idx) => (
-            <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0 }}>
+            <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0, padding: '2rem', borderLeft: '4px solid var(--primary)', boxShadow: '0 8px 30px rgba(10, 186, 181, 0.04)' }}>
               <div>
-                <h3 style={{ fontSize: '1.4rem', color: '#ffffff', marginBottom: '0.75rem', fontFamily: 'Outfit' }}>
+                <h3 style={{ fontSize: '1.45rem', color: '#088c87', marginBottom: '0.75rem', fontFamily: 'Outfit', fontWeight: 800 }}>
                   {service.title}
                 </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: '1.75rem' }}>
                   {service.desc}
                 </p>
               </div>
               <div style={{
-                background: 'rgba(255,255,255,0.01)',
-                border: '1px solid rgba(255,255,255,0.03)',
-                padding: '1rem 1.25rem',
-                borderRadius: '10px'
+                background: 'var(--primary-light)',
+                border: '1px solid rgba(10, 186, 181, 0.15)',
+                padding: '1.25rem',
+                borderRadius: '12px'
               }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--accent-dark)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.75rem' }}>
                   {lang === 'zh' ? '公会核心执业胜任标准' : lang === 'bm' ? 'Kecekapan Standard Teras' : 'Core Standard Competencies'}
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   {service.skills.map((skill, sIdx) => (
-                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#ffffff' }}>
-                      <CheckSquare size={14} style={{ color: 'var(--health)', flexShrink: 0 }} />
+                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#1e293b' }}>
+                      <CheckSquare size={15} style={{ color: 'var(--health)', flexShrink: 0 }} />
                       <span>{skill}</span>
                     </div>
                   ))}
