@@ -157,7 +157,32 @@ export default function RegisterPage() {
 
     const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !phone || !bio || !location || !nric) return;
+    
+    // Explicit client-side feedback for all required fields
+    if (!name.trim()) {
+      alert(lang === 'zh' ? '⚠️ 请输入您的姓名。' : lang === 'bm' ? '⚠️ Sila masukkan nama penuh anda.' : '⚠️ Please enter your full name.');
+      return;
+    }
+    if (!email.trim()) {
+      alert(lang === 'zh' ? '⚠️ 请输入您的电子邮箱。' : lang === 'bm' ? '⚠️ Sila masukkan e-mel anda.' : '⚠️ Please enter your email address.');
+      return;
+    }
+    if (!phone.trim()) {
+      alert(lang === 'zh' ? '⚠️ 请输入您的联络电话。' : lang === 'bm' ? '⚠️ Sila masukkan nombor telefon anda.' : '⚠️ Please enter your contact number.');
+      return;
+    }
+    if (!location.trim()) {
+      alert(lang === 'zh' ? '⚠️ 请输入您的服务区域。' : lang === 'bm' ? '⚠️ Sila masukkan lokasi perkhidmatan anda.' : '⚠️ Please enter your service location.');
+      return;
+    }
+    if (!nric.trim()) {
+      alert(lang === 'zh' ? '⚠️ 请输入您的身份证号码。' : lang === 'bm' ? '⚠️ Sila masukkan No. Kad Pengenalan anda.' : '⚠️ Please enter your NRIC / ID number.');
+      return;
+    }
+    if (!bio.trim()) {
+      alert(lang === 'zh' ? '⚠️ 请输入您的个人简介与从业经验。' : lang === 'bm' ? '⚠️ Sila masukkan biodata/pengalaman anda.' : '⚠️ Please enter your biography / experience details.');
+      return;
+    }
 
     if (!icDoc) {
       alert(lang === 'zh' 
@@ -277,7 +302,7 @@ export default function RegisterPage() {
                 <Shield size={40} />
               </div>
               
-              <h2 style={{ fontSize: '1.8rem', color: '#ffffff', marginBottom: '0.75rem' }}>
+              <h2 style={{ fontSize: '1.8rem', color: 'var(--text-light)', marginBottom: '0.75rem' }}>
                 {t.register.successTitle}
               </h2>
               <span className="badge badge-pending" style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', marginBottom: '1.5rem' }}>
@@ -316,7 +341,7 @@ export default function RegisterPage() {
 
               <div className="card">
                 <form onSubmit={handleRegister}>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: 'var(--text-light)' }}>
                     1. {lang === 'zh' ? '基本身份信息' : lang === 'bm' ? 'Maklumat Identiti & Perhubungan' : 'Identity & Contact Details'}
                   </h3>
                   
@@ -386,7 +411,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: 'var(--text-light)' }}>
                     2. {lang === 'zh' ? '护理师专业资质登记' : lang === 'bm' ? 'Butiran Pentauliahan Penjaga' : 'Caregiver Accreditation Details'}
                   </h3>
 
@@ -439,7 +464,7 @@ export default function RegisterPage() {
                             >
                               <span style={{ fontSize: '1.5rem' }}>{cat.icon}</span>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-light)' }}>
                                   {lang === 'zh' ? cat.labelZh : lang === 'bm' ? cat.labelBm : cat.labelEn}
                                 </div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
@@ -474,7 +499,7 @@ export default function RegisterPage() {
                       <label className="form-label">{t.register.experience}</label>
                       <select
                         className="form-input"
-                        style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
+                        style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }}
                         value={exp}
                         onChange={(e) => setExp(e.target.value)}
                       >
@@ -501,7 +526,7 @@ export default function RegisterPage() {
                     />
                   </div>
 
-                  <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: 'var(--text-light)' }}>
                     3. {lang === 'zh' ? '上传职业头像照片' : lang === 'bm' ? 'Muat Naik Gambar Potret' : 'Upload Professional Headshot'}
                   </h3>
 
@@ -577,7 +602,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: 'var(--text-light)' }}>
                     4. {lang === 'zh' ? '学术资格与体检诊断附件' : lang === 'bm' ? 'Sijil & Dokumen Lampiran Kesihatan' : 'Credentials & Diagnostics Attachments'}
                   </h3>
 
@@ -603,7 +628,7 @@ export default function RegisterPage() {
                       onMouseOut={(e)=>e.currentTarget.style.borderColor=proof ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
                       >
                         <UploadCloud size={24} style={{ color: proof ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: proof ? 'var(--health)' : 'white', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: proof ? 'var(--health)' : 'var(--text-main)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {proof ? `✓ ${proof}` : (lang === 'zh' ? '选择证书文件 (.pdf/图片)' : 'Select Certificate File')}
                         </span>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
@@ -634,7 +659,7 @@ export default function RegisterPage() {
                       onMouseOut={(e)=>e.currentTarget.style.borderColor=healthCert ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
                       >
                         <UploadCloud size={24} style={{ color: healthCert ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: healthCert ? 'var(--health)' : 'white', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: healthCert ? 'var(--health)' : 'var(--text-main)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {healthCert ? `✓ ${healthCert}` : (lang === 'zh' ? '选择体检诊断合格报告' : 'Select Health Diagnostics')}
                         </span>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
@@ -669,7 +694,7 @@ export default function RegisterPage() {
                       onMouseOut={(e)=>e.currentTarget.style.borderColor=icDoc ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
                       >
                         <UploadCloud size={24} style={{ color: icDoc ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: icDoc ? 'var(--health)' : 'white', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: icDoc ? 'var(--health)' : 'var(--text-main)', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {icDoc ? `✓ ${icDoc}` : (lang === 'zh' ? '选择身份证正反面扫描件/照片 (.pdf/图片)' : 'Select IC/NRIC Document')}
                         </span>
                         <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
