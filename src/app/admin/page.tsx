@@ -1,23 +1,82 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Briefcase, DollarSign, BookOpen, MessageSquare, Check, X, Award, FileText, Send, CheckCircle2, AlertCircle, Megaphone } from 'lucide-react';
+import { Shield, Users, Briefcase, DollarSign, BookOpen, MessageSquare, Check, X, Award, FileText, Send, CheckCircle2, AlertCircle, Megaphone, User } from 'lucide-react';
 import { store } from '@/lib/store';
 
+const compressImage = (base64Str: string, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'cases' | 'inquiries' | 'library' | 'announcements' | 'escortForms'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'unionMembers' | 'cases' | 'inquiries' | 'library' | 'announcements' | 'escortForms'>('overview');
   const [selectedMember, setSelectedMember] = useState<any>(null);
-  const [docTab, setDocTab] = useState<'cert' | 'health'>('cert');
+  const [docTab, setDocTab] = useState<'cert' | 'health' | 'icDoc'>('cert');
   const [escortForms, setEscortForms] = useState<any[]>([]);
   const [selectedEscortForm, setSelectedEscortForm] = useState<any>(null);
+  const [selectedUnionCard, setSelectedUnionCard] = useState<any>(null);
+  const [selectedMockIC, setSelectedMockIC] = useState<any>(null);
   
   // Vetting Registry States connected to Store
   const [pendingMembers, setPendingMembers] = useState<any[]>([]);
+  const [unionMembers, setUnionMembers] = useState<any[]>([]);
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [libItems, setLibItems] = useState<any[]>([]);
+  const [careRequests, setCareRequests] = useState<any[]>([]);
 
   const [newLibTitle, setNewLibTitle] = useState('');
-  const [newLibType, setNewLibType] = useState('PDF Document');
+  const [newLibType, setNewLibType] = useState('Image Map');
+  const [newLibState, setNewLibState] = useState('Kuala Lumpur');
+  const [newLibImage, setNewLibImage] = useState('');
+  const [newLibFileName, setNewLibFileName] = useState('');
+  const [newLibFileSize, setNewLibFileSize] = useState('');
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [selectedMatchRequestId, setSelectedMatchRequestId] = useState<string>('');
+  const [showMatchResults, setShowMatchResults] = useState<boolean>(false);
+  const [stateFilter, setStateFilter] = useState('');
+  const [adminRole, setAdminRole] = useState<'master' | 'standard'>('master');
+  const [newStaffPassword, setNewStaffPassword] = useState('');
+  const [currentStaffPassword, setCurrentStaffPassword] = useState('CARE8268');
+  const [lang, setLang] = useState<string>('en');
+
+  // Footer Config States
+  const [footerAddress, setFooterAddress] = useState('KL Sentral Business Suites, Kuala Lumpur');
+  const [footerPhone, setFooterPhone] = useState('+60 3-2274 9988');
+  const [footerEmail, setFooterEmail] = useState('registry@mcsa.com.my');
+  const [footerDesc, setFooterDesc] = useState('Accrediting and dispatching certified healthcare companions, confinement caregivers, and elder escorts across Malaysia.');
 
   // Announcements & Activity Photos States
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -28,45 +87,200 @@ export default function AdminPage() {
   const [activityPhotos, setActivityPhotos] = useState<any[]>([]);
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoCaption, setPhotoCaption] = useState('');
+  const [photoTab, setPhotoTab] = useState<'upload' | 'url'>('upload');
+  const [photoFileName, setPhotoFileName] = useState('');
+  const [photoFileSize, setPhotoFileSize] = useState('');
 
   useEffect(() => {
+    setLang(store.getLanguage());
     setPendingMembers(store.getPendingMembers());
+    setUnionMembers(store.getUnionMembers());
     setInquiries(store.getInquiries());
     setLibItems(store.getLibItems());
     setAnnouncements(store.getAnnouncements());
     setActivityPhotos(store.getActivityPhotos());
     setEscortForms(store.getEscortForms());
+    setCareRequests(store.getCareRequests());
+    setCurrentStaffPassword(store.getStandardAdminPassword());
+
+    const footerInfo = store.getFooterInfo();
+    if (footerInfo) {
+      setFooterAddress(footerInfo.address || 'KL Sentral Business Suites, Kuala Lumpur');
+      setFooterPhone(footerInfo.phone || '+60 3-2274 9988');
+      setFooterEmail(footerInfo.email || 'registry@mcsa.com.my');
+      setFooterDesc(footerInfo.desc || 'Accrediting and dispatching certified healthcare companions, confinement caregivers, and elder escorts across Malaysia.');
+    }
+
+    const loggedEmail = localStorage.getItem('mcsa_logged_admin_email') || 'admin@mcsa.com.my';
+    if (loggedEmail.toLowerCase().includes('staff') || loggedEmail.toLowerCase().includes('standard')) {
+      setAdminRole('standard');
+      setActiveTab('members');
+    } else {
+      setAdminRole('master');
+    }
+
+    // Dynamic cross-tab storage sync
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'mcsa_pending') {
+        setPendingMembers(store.getPendingMembers());
+      }
+      if (e.key === 'mcsa_union_members') {
+        setUnionMembers(store.getUnionMembers());
+      }
+      if (e.key === 'mcsa_inquiries') {
+        setInquiries(store.getInquiries());
+      }
+      if (e.key === 'mcsa_announcements') {
+        setAnnouncements(store.getAnnouncements());
+      }
+      if (e.key === 'mcsa_activity_photos') {
+        setActivityPhotos(store.getActivityPhotos());
+      }
+      if (e.key === 'mcsa_escort_forms') {
+        setEscortForms(store.getEscortForms());
+      }
+      if (e.key === 'mcsa_care_requests') {
+        setCareRequests(store.getCareRequests());
+      }
+      if (e.key === 'mcsa_footer_info') {
+        const info = store.getFooterInfo();
+        if (info) {
+          setFooterAddress(info.address);
+          setFooterPhone(info.phone);
+          setFooterEmail(info.email);
+          setFooterDesc(info.desc);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
-  const approveMember = (id: string, name: string) => {
+  const handleUpdateStaffPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffPassword.trim()) return;
+    store.setStandardAdminPassword(newStaffPassword);
+    setCurrentStaffPassword(newStaffPassword);
+    alert(`Standard Admin password successfully changed to: ${newStaffPassword}`);
+    setNewStaffPassword('');
+  };
+
+  const handleUpdateFooterInfo = (e: React.FormEvent) => {
+    e.preventDefault();
+    const info = {
+      address: footerAddress,
+      phone: footerPhone,
+      email: footerEmail,
+      desc: footerDesc
+    };
+    store.setFooterInfo(info);
+    alert('Footer information successfully updated! All public/private headers & footers are synchronized in real-time.');
+  };
+
+  const handleResetDatabase = () => {
+    const confirmMessage = lang === 'zh'
+      ? '⚠️ 您确定要重置系统数据库吗？这将清除所有本地新注册的会员、激活的会员和所有申请数据，并恢复为系统初始默认状态。此操作无法撤销！'
+      : lang === 'bm'
+      ? '⚠️ Adakah anda pasti mahu menetapkan semula pangkalan data sistem? Ini akan memadamkan semua ahli baru, ahli aktif, dan data permohonan, serta menetapkan semula ke keadaan lalai asal. Tindakan ini tidak boleh diundurkan!'
+      : '⚠️ Are you sure you want to reset the system database? This will clear all locally registered members, active members, and application data, and restore the system to its initial default state. This action cannot be undone!';
+
+    if (confirm(confirmMessage)) {
+      store.resetDatabase();
+    }
+  };
+
+  const approveMember = async (id: string, name: string) => {
     const applicant = pendingMembers.find(m => m.id === id);
     if (!applicant) return;
 
-    const newMemberNum = 'MCSA-2026-' + Math.floor(1000 + Math.random() * 9000);
-    const newMember = {
-      id: 'M-' + Math.floor(103 + Math.random() * 100),
-      name: applicant.name,
-      email: applicant.email,
-      phone: applicant.phone,
-      category: applicant.category,
-      exp: applicant.exp,
-      location: applicant.location || 'Kuala Lumpur',
-      member_number: newMemberNum,
-      expiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-      bio: applicant.bio,
-      photo: applicant.photo || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&fit=crop'
-    };
+    // Check if caregiver already exists in union registry by NRIC, phone or email
+    const existingUnion = store.getUnionMembers();
+    const existingMember = existingUnion.find((m: any) => 
+      (applicant.nric && m.nric === applicant.nric) || 
+      m.email.toLowerCase() === applicant.email.toLowerCase() || 
+      m.phone === applicant.phone
+    );
+
+    let updatedUnion;
+    let message = '';
+
+    // Compress photo on approval if it exists as a base64 image
+    let compressedPhoto = applicant.photo;
+    if (compressedPhoto && compressedPhoto.startsWith('data:image')) {
+      try {
+        compressedPhoto = await compressImage(compressedPhoto, 250, 250, 0.75);
+      } catch (imgErr) {
+        console.error("Photo compression failed:", imgErr);
+      }
+    }
+
+    if (existingMember) {
+      // Split and merge categories individually to prevent duplication of comma-separated roles
+      const existingCategories = (existingMember.category || '').split(',').map((c: string) => c.trim()).filter(Boolean);
+      const newCategories = (applicant.category || '').split(',').map((c: string) => c.trim()).filter(Boolean);
+      
+      newCategories.forEach((cat: string) => {
+        if (!existingCategories.includes(cat)) {
+          existingCategories.push(cat);
+        }
+      });
+      
+      const mergedMember = {
+        ...existingMember,
+        category: existingCategories.join(', '),
+        exp: applicant.exp || existingMember.exp,
+        location: applicant.location || existingMember.location,
+        bio: existingMember.bio + ' | ' + applicant.bio,
+        photo: compressedPhoto || existingMember.photo
+      };
+
+      updatedUnion = existingUnion.map((m: any) => m.id === existingMember.id ? mergedMember : m);
+      message = `Categories merged for ${name}! Added "${applicant.category}" to existing membership ID ${existingMember.member_number}.`;
+    } else {
+      // Create new member
+      const newMemberNum = 'MCSA-2026-' + Math.floor(1000 + Math.random() * 9000);
+      const newMember = {
+        id: 'M-' + Math.floor(103 + Math.random() * 100),
+        name: applicant.name,
+        email: applicant.email,
+        phone: applicant.phone,
+        nric: applicant.nric || '',
+        category: applicant.category,
+        exp: applicant.exp,
+        location: applicant.location || 'Kuala Lumpur',
+        member_number: newMemberNum,
+        expiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+        bio: applicant.bio,
+        photo: compressedPhoto || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=256&h=256&fit=crop',
+        icDoc: applicant.icDoc || '',
+        icDocData: applicant.icDocData || '',
+        proof: applicant.proof || '',
+        proofData: '', // Discard heavy vetting certificate to save local storage quota
+        healthCert: applicant.healthCert || '',
+        healthCertData: '' // Discard heavy health clearance certificate to save local storage quota
+      };
+      updatedUnion = [...existingUnion, newMember];
+      message = `Accreditation approved for ${name}! Registered membership ID is ${newMemberNum}. Billed licensing fee.`;
+    }
 
     const updatedPending = pendingMembers.filter(m => m.id !== id);
-    const updatedUnion = [...store.getUnionMembers(), newMember];
     
-    store.setPendingMembers(updatedPending);
-    store.setUnionMembers(updatedUnion);
-
-    setPendingMembers(updatedPending);
-    setSelectedMember(null);
-
-    alert(`Accreditation approved for ${name}! Registered membership ID is ${newMemberNum}. Billed licensing fee.`);
+    try {
+      store.setPendingMembers(updatedPending);
+      store.setUnionMembers(updatedUnion);
+      
+      setPendingMembers(updatedPending);
+      setUnionMembers(updatedUnion);
+      setSelectedMember(null);
+      alert(message);
+    } catch (err) {
+      console.error("Vetting approval database write failed:", err);
+      alert(lang === 'zh'
+        ? '⚠️ 批准操作保存失败！由于多次测试注册上传，您的浏览器本地存储 (LocalStorage) 已满。\n\n💡 请前往“Union Overview (公会概览)”选项卡，拉到最下方，点击危险区域的“重置公会测试数据库”按钮清理空间，然后重新测试。'
+        : '⚠️ Vetting approval save failed! Your browser LocalStorage is full.\n\n💡 Please go to the "Union Overview" tab, scroll to the bottom, and click "Reset System Local Database" to clear space, then try again.');
+    }
   };
 
   const rejectMember = (id: string, name: string) => {
@@ -77,20 +291,255 @@ export default function AdminPage() {
     alert(`Rejected registration for ${name}. Notification sent.`);
   };
 
+  const getValidityRange = (m: any) => {
+    if (!m.expiry) return '1 Year Validity';
+    const expDate = new Date(m.expiry);
+    const startDate = new Date(expDate);
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    const startStr = startDate.toISOString().split('T')[0];
+    return `${startStr} ~ ${m.expiry}`;
+  };
+
+  const exportToCSV = (filteredMembers: any[]) => {
+    const headers = [
+      'Name (姓名)',
+      'Membership ID (会员编号)',
+      'NRIC (身份证号)',
+      'Category/Roles (资质类别)',
+      'Experience (经验)',
+      'Primary Location (主要区域)',
+      'Phone (联系电话)',
+      'Email (电子邮箱)',
+      'Membership Validity (会员期)',
+      'Bio (简介)'
+    ];
+
+    const formatValue = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const stringified = String(val).replace(/"/g, '""');
+      return `"${stringified}"`;
+    };
+
+    const rows = filteredMembers.map(m => {
+      return [
+        m.name,
+        m.member_number,
+        m.nric || 'N/A',
+        m.category,
+        m.exp,
+        m.location,
+        m.phone,
+        m.email,
+        getValidityRange(m),
+        m.bio || ''
+      ].map(formatValue).join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `MCSA_Union_Members_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleAssignCaregiver = (req: any, member: any) => {
+    // 1. Create a calendar appointment for the caregiver
+    const calendarAppointments = JSON.parse(localStorage.getItem('mcsa_calendar_appointments') || '[]');
+    
+    // Map member category to caregiver role key
+    const categoryLower = (member.category || '').toLowerCase();
+    let role = 'elderly';
+    if (categoryLower.includes('confinement') || categoryLower.includes('maternity')) role = 'maternity';
+    else if (categoryLower.includes('companion') || categoryLower.includes('escort')) role = 'escort';
+    else if (categoryLower.includes('babysitter')) role = 'babysitter';
+
+    // Parse location from message if req.location is undefined
+    let resolvedLocation = req.location || '';
+    if (!resolvedLocation && req.message) {
+      const msg = req.message.toLowerCase();
+      if (msg.includes('puchong')) resolvedLocation = 'Puchong, Selangor';
+      else if (msg.includes('petaling jaya') || msg.includes('pj ')) resolvedLocation = 'Petaling Jaya, Selangor';
+      else if (msg.includes('cheras')) resolvedLocation = 'Cheras, Kuala Lumpur';
+      else if (msg.includes('ampang')) resolvedLocation = 'Ampang, Selangor';
+      else if (msg.includes('kepong')) resolvedLocation = 'Kepong, Kuala Lumpur';
+      else if (msg.includes('klang')) resolvedLocation = 'Klang, Selangor';
+      else if (msg.includes('shah alam')) resolvedLocation = 'Shah Alam, Selangor';
+    }
+    if (!resolvedLocation) resolvedLocation = 'Kuala Lumpur';
+
+    const newApp = {
+      id: 'APPT-' + Math.floor(100 + Math.random() * 900),
+      role: role,
+      date: req.date || '2026-06-05',
+      time: '09:00 AM',
+      clientName: req.name,
+      clientPhone: req.contact || 'N/A',
+      clientEmail: req.email || 'N/A',
+      location: resolvedLocation,
+      details: req.message,
+      status: 'Scheduled'
+    };
+    const updatedAppts = [...calendarAppointments, newApp];
+    localStorage.setItem('mcsa_calendar_appointments', JSON.stringify(updatedAppts));
+
+    // 2. Update the care request status to 'accepted' and store caregiver name
+    const updatedRequests = careRequests.map((r: any) => 
+      r.id === req.id ? { ...r, status: 'accepted', assignedCaregiver: member.name } : r
+    );
+    store.setCareRequests(updatedRequests);
+    setCareRequests(updatedRequests);
+
+    // Reset smart match states
+    setShowMatchResults(false);
+    setSelectedMatchRequestId('');
+
+    alert(`🎉 Success! Caregiver ${member.name} has been assigned to ${req.name}.\n\nThe shift is scheduled for ${newApp.date} and has been synced to the caregiver's workstation.`);
+  };
+
+  const handleLibFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setNewLibFileName(file.name);
+    const sizeMb = file.size / (1024 * 1024);
+    const formattedSize = sizeMb > 0.1 ? `${sizeMb.toFixed(1)} MB` : `${Math.round(file.size / 1024)} KB`;
+    setNewLibFileSize(formattedSize);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const originalBase64 = reader.result as string;
+      if (file.size > 150 * 1024) {
+        setNewLibFileSize('Compressing... / 正在压缩图片...');
+        try {
+          const compressed = await compressImage(originalBase64);
+          setNewLibImage(compressed);
+          
+          // Estimate compressed size
+          const strLen = compressed.length - 'data:image/jpeg;base64,'.length;
+          const approxBytes = 4 * Math.ceil(strLen / 3) * 0.5624896;
+          const approxKb = Math.round(approxBytes / 1024);
+          setNewLibFileSize(`${approxKb} KB (Compressed / 已压缩)`);
+        } catch (err) {
+          console.error('Compression failed, using original:', err);
+          setNewLibImage(originalBase64);
+        }
+      } else {
+        setNewLibImage(originalBase64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const publishLibItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLibTitle.trim()) return;
-    const newItem = {
-      id: 'LIB-' + Math.floor(101 + Math.random() * 100),
-      title: newLibTitle,
-      type: newLibType,
-      size: '420 KB'
-    };
-    const updated = [newItem, ...libItems];
-    store.setLibItems(updated);
-    setLibItems(updated);
+
+    let finalImageUrl = newLibImage;
+    if (!finalImageUrl) {
+      if (newLibType === 'Image Map') {
+        finalImageUrl = '/hospital_maps/hkl_map.jpg'; // fallback default
+      }
+    }
+
+    if (editItemId) {
+      // Edit mode
+      const updated = libItems.map((item) => {
+        if (item.id === editItemId) {
+          return {
+            ...item,
+            title: newLibTitle,
+            type: newLibType,
+            state: newLibState,
+            size: newLibFileSize || item.size || '420 KB',
+            imageUrl: finalImageUrl || item.imageUrl
+          };
+        }
+        return item;
+      });
+      store.setLibItems(updated);
+      setLibItems(updated);
+      setEditItemId(null);
+      alert('Updated guide details successfully.');
+    } else {
+      // Publish mode
+      const newItem = {
+        id: 'LIB-' + Math.floor(101 + Math.random() * 100),
+        title: newLibTitle,
+        type: newLibType,
+        state: newLibState,
+        size: newLibFileSize || '420 KB',
+        imageUrl: finalImageUrl
+      };
+      const updated = [newItem, ...libItems];
+      store.setLibItems(updated);
+      setLibItems(updated);
+      alert('Published new library file to caregiver databases.');
+    }
+
+    // Reset form states
     setNewLibTitle('');
-    alert('Published new library file to caregiver databases.');
+    setNewLibType('Image Map');
+    setNewLibState('Kuala Lumpur');
+    setNewLibImage('');
+    setNewLibFileName('');
+    setNewLibFileSize('');
+  };
+
+  const handleEditLibItem = (item: any) => {
+    setEditItemId(item.id);
+    setNewLibTitle(item.title);
+    setNewLibType(item.type);
+    setNewLibState(item.state || 'Kuala Lumpur');
+    setNewLibImage(item.imageUrl || '');
+    setNewLibFileName(item.imageUrl ? 'Existing File' : '');
+    setNewLibFileSize(item.size || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditItemId(null);
+    setNewLibTitle('');
+    setNewLibType('Image Map');
+    setNewLibState('Kuala Lumpur');
+    setNewLibImage('');
+    setNewLibFileName('');
+    setNewLibFileSize('');
+  };
+
+  // Batch import library items
+  const handleBatchImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (Array.isArray(parsed)) {
+          const formattedImport = parsed.map((item: any, idx: number) => ({
+            id: 'LIB-IMP-' + Math.floor(1000 + Math.random() * 9000) + '-' + idx,
+            title: item.title || 'Untitled Hospital Map',
+            type: item.type || 'Image Map',
+            state: item.state || 'Kuala Lumpur',
+            size: item.size || '420 KB',
+            imageUrl: item.imageUrl || '/hospital_maps/hkl_map.jpg'
+          }));
+          const updated = [...formattedImport, ...libItems];
+          store.setLibItems(updated);
+          setLibItems(updated);
+          alert(`Successfully batch imported ${formattedImport.length} hospitals!`);
+        } else {
+          alert('Invalid JSON structure. Root element must be an array.');
+        }
+      } catch (err) {
+        alert('Failed to parse JSON file: ' + (err as Error).message);
+      }
+    };
+    reader.readAsText(file);
   };
 
   const publishAnnouncement = (e: React.FormEvent) => {
@@ -118,20 +567,73 @@ export default function AdminPage() {
     alert('Announcement deleted.');
   };
 
+  const handleGalleryPhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoFileName(file.name);
+    const sizeMb = file.size / (1024 * 1024);
+    const formattedSize = sizeMb > 0.1 ? `${sizeMb.toFixed(1)} MB` : `${Math.round(file.size / 1024)} KB`;
+    setPhotoFileSize(formattedSize);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const originalBase64 = reader.result as string;
+      if (file.size > 150 * 1024) {
+        setPhotoFileSize('Compressing... / 正在压缩图片...');
+        try {
+          const compressed = await compressImage(originalBase64, 800, 800, 0.75);
+          setPhotoUrl(compressed);
+          
+          // Estimate compressed size
+          const strLen = compressed.length - 'data:image/jpeg;base64,'.length;
+          const approxBytes = 4 * Math.ceil(strLen / 3) * 0.5624896;
+          const approxKb = Math.round(approxBytes / 1024);
+          setPhotoFileSize(`${approxKb} KB (Compressed / 已压缩)`);
+        } catch (err) {
+          console.error('Compression failed, using original:', err);
+          setPhotoUrl(originalBase64);
+        }
+      } else {
+        setPhotoUrl(originalBase64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const addActivityPhoto = (e: React.FormEvent) => {
     e.preventDefault();
     if (!photoUrl.trim() || !photoCaption.trim()) return;
+
+    let finalUrl = photoUrl.trim();
+    // Auto-convert standard Google Drive sharing links to direct image links
+    if (finalUrl.includes('drive.google.com')) {
+      const match = finalUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || finalUrl.match(/id=([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        finalUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+
     const newPhoto = {
       id: 'PHOTO-' + Math.floor(101 + Math.random() * 900),
-      url: photoUrl,
+      url: finalUrl,
       caption: photoCaption
     };
     const updated = [...activityPhotos, newPhoto];
-    store.setActivityPhotos(updated);
-    setActivityPhotos(updated);
-    setPhotoUrl('');
-    setPhotoCaption('');
-    alert('Activity photo added to public galleries.');
+    
+    try {
+      store.setActivityPhotos(updated);
+      setActivityPhotos(updated);
+      setPhotoUrl('');
+      setPhotoCaption('');
+      setPhotoFileName('');
+      setPhotoFileSize('');
+      alert('Activity photo added to public galleries successfully!');
+    } catch (err) {
+      alert(lang === 'zh'
+        ? '⚠️ 存储已满！无法添加该照片。请在“Overview”中重置数据库以腾出空间。'
+        : '⚠️ LocalStorage quota full! Could not add this photo. Please reset database in Overview tab.');
+    }
   };
 
   const deleteActivityPhoto = (id: string) => {
@@ -145,8 +647,8 @@ export default function AdminPage() {
     <div className="app-container" style={{ background: '#0b1329' }}>
       {/* Sidebar with Glassmorphic design */}
       <aside className="sidebar" style={{ background: 'rgba(15, 23, 42, 0.9)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="sidebar-logo">
-          🛡️ MCSA UNION ADMIN
+        <div className="sidebar-logo" style={{ fontSize: '1rem', whiteSpace: 'nowrap' }}>
+          🛡️ MCSA {adminRole === 'master' ? 'MASTER' : 'STANDARD'} ADMIN
         </div>
         <ul className="sidebar-menu">
           <li>
@@ -169,31 +671,64 @@ export default function AdminPage() {
           </li>
           <li>
             <button 
-              onClick={() => setActiveTab('cases')}
-              className={`sidebar-link ${activeTab === 'cases' ? 'active' : ''}`}
+              onClick={() => setActiveTab('unionMembers')}
+              className={`sidebar-link ${activeTab === 'unionMembers' ? 'active' : ''}`}
               style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
             >
-              <Briefcase size={18} /> Match Dispatch
+              <Users size={18} /> Active Members ({unionMembers.length})
             </button>
           </li>
-          <li>
-            <button 
-              onClick={() => setActiveTab('inquiries')}
-              className={`sidebar-link ${activeTab === 'inquiries' ? 'active' : ''}`}
-              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <MessageSquare size={18} /> Client Inquiries
-            </button>
-          </li>
-          <li>
-            <button 
-              onClick={() => setActiveTab('library')}
-              className={`sidebar-link ${activeTab === 'library' ? 'active' : ''}`}
-              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <BookOpen size={18} /> Library SOPs
-            </button>
-          </li>
+
+          {adminRole === 'master' ? (
+            <>
+              <li>
+                <button 
+                  onClick={() => setActiveTab('cases')}
+                  className={`sidebar-link ${activeTab === 'cases' ? 'active' : ''}`}
+                  style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <Briefcase size={18} /> Match Dispatch
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => setActiveTab('inquiries')}
+                  className={`sidebar-link ${activeTab === 'inquiries' ? 'active' : ''}`}
+                  style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <MessageSquare size={18} /> Client Inquiries
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => setActiveTab('library')}
+                  className={`sidebar-link ${activeTab === 'library' ? 'active' : ''}`}
+                  style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <BookOpen size={18} /> Library SOPs
+                </button>
+              </li>
+            </>
+          ) : (
+            <>
+              <li style={{ opacity: 0.45 }}>
+                <div className="sidebar-link" style={{ cursor: 'not-allowed', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Briefcase size={18} /> Match Dispatch 🔒
+                </div>
+              </li>
+              <li style={{ opacity: 0.45 }}>
+                <div className="sidebar-link" style={{ cursor: 'not-allowed', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <MessageSquare size={18} /> Client Inquiries 🔒
+                </div>
+              </li>
+              <li style={{ opacity: 0.45 }}>
+                <div className="sidebar-link" style={{ cursor: 'not-allowed', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <BookOpen size={18} /> Library SOPs 🔒
+                </div>
+              </li>
+            </>
+          )}
+
           <li>
             <button 
               onClick={() => setActiveTab('announcements')}
@@ -209,11 +744,20 @@ export default function AdminPage() {
               className={`sidebar-link ${activeTab === 'escortForms' ? 'active' : ''}`}
               style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
             >
-              <FileText size={18} /> Escort Forms
+              <User size={18} /> Patient Records
             </button>
           </li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem' }}>
-            <a href="/" className="sidebar-link" style={{ color: '#fca5a5' }}>🚪 Logout Admin</a>
+            <a 
+              href="/" 
+              onClick={() => {
+                localStorage.removeItem('mcsa_logged_admin_email');
+              }}
+              className="sidebar-link" 
+              style={{ color: '#fca5a5' }}
+            >
+              🚪 {lang === 'zh' ? '安全退出' : 'Logout Admin'}
+            </a>
           </li>
         </ul>
       </aside>
@@ -272,12 +816,199 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
+
+            {/* Standard Admin Account Control (Master Admin Only) */}
+            {adminRole === 'master' && (
+              <>
+                <div className="card" style={{ marginTop: '2.5rem' }}>
+                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff' }}>
+                    🛡️ Standard Admin Account Control / 标准管理员账户管理
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                    As the Master Admin, you can update the credential code for standard administrative hires (e.g., when staff resign or rotate roles). Changes immediately invalidate prior session keys.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', alignItems: 'start' }}>
+                    <div style={{ background: 'rgba(15, 23, 42, 0.3)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                      <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.75rem', marginTop: 0 }}>Current Staff Account Details / 当前员工账户信息</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                        <div>Email Address: <strong style={{ color: '#ffffff' }}>staff@mcsa.com.my</strong></div>
+                        <div>Role Permission: <strong style={{ color: 'var(--primary)' }}>Standard Admin (Restricted)</strong></div>
+                        <div>Current Access Key: <strong style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>{currentStaffPassword}</strong></div>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleUpdateStaffPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>New Standard Admin Password / 新密码</label>
+                        <input 
+                          type="text" 
+                          required 
+                          minLength={6}
+                          className="form-input" 
+                          placeholder="e.g. CARE8268, MCSA2026staff"
+                          value={newStaffPassword}
+                          onChange={(e) => setNewStaffPassword(e.target.value)}
+                          style={{ height: '40px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                      <button 
+                        type="submit" 
+                        className="btn btn-primary"
+                        style={{ 
+                          height: '40px',
+                          background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                          boxShadow: '0 4px 12px var(--primary-glow)',
+                          fontSize: '0.85rem',
+                          fontWeight: 700
+                        }}
+                      >
+                        Update Staff Access Key / 更新凭证
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Footer Info Control Card */}
+                <div className="card" style={{ marginTop: '2.5rem' }}>
+                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ffffff' }}>
+                    🏢 Association Footer & Contact Details / 协会页脚及联系方式管理
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                    As the Master Admin, you can dynamically edit the public contact details, physical address, and organization bio presented in the site-wide footer. Changes will immediately sync across all portal screens.
+                  </p>
+                  <form onSubmit={handleUpdateFooterInfo} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Association Phone / 协会联络电话</label>
+                        <input 
+                          type="text" 
+                          required 
+                          className="form-input" 
+                          placeholder="+60 3-2274 9988"
+                          value={footerPhone}
+                          onChange={(e) => setFooterPhone(e.target.value)}
+                          style={{ height: '40px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Association Email / 官方电子邮箱</label>
+                        <input 
+                          type="email" 
+                          required 
+                          className="form-input" 
+                          placeholder="registry@mcsa.com.my"
+                          value={footerEmail}
+                          onChange={(e) => setFooterEmail(e.target.value)}
+                          style={{ height: '40px', fontSize: '0.85rem' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Physical Office Address / 协会实体办公地址</label>
+                      <input 
+                        type="text" 
+                        required 
+                        className="form-input" 
+                        placeholder="KL Sentral Business Suites, Kuala Lumpur"
+                        value={footerAddress}
+                        onChange={(e) => setFooterAddress(e.target.value)}
+                        style={{ height: '40px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>Association Brief Bio / 协会简介宣传文案</label>
+                      <textarea 
+                        required 
+                        rows={3}
+                        className="form-input" 
+                        placeholder="Describe the union accreditation mission..."
+                        value={footerDesc}
+                        onChange={(e) => setFooterDesc(e.target.value)}
+                        style={{ fontSize: '0.85rem', resize: 'none' }}
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      style={{ 
+                        height: '40px',
+                        background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                        boxShadow: '0 4px 12px var(--primary-glow)',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        alignSelf: 'flex-start',
+                        padding: '0 2rem'
+                      }}
+                    >
+                      Save Footer Settings / 保存页脚设置
+                    </button>
+                  </form>
+                </div>
+
+                {/* Danger Zone / Database Reset Card */}
+                <div className="card" style={{ marginTop: '2.5rem', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.02)', boxShadow: '0 4px 20px rgba(239, 68, 68, 0.05)' }}>
+                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fca5a5' }}>
+                    ⚠️ Danger Zone: Reset System Database / 危险区域：重置系统数据库 / Zon Bahaya: Tetap Semula Pangkalan Data
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                    {lang === 'zh' 
+                      ? '如果您在审批会员或保存数据时遇到“本地存储已满 (LocalStorage Full)”的提示，可以使用此功能清除本地缓存。重置操作将清除所有新注册的会员、正在申请的会员、客户咨询以及排班表，并恢复为系统的初始演示 data。'
+                      : lang === 'bm'
+                      ? 'Jika anda menghadapi amaran "Penyimpanan Tempatan Penuh (LocalStorage Full)" semasa meluluskan ahli atau menyimpan data, anda boleh menggunakan fungsi ini untuk mengosongkan cache tempatan. Tindakan ini akan memadamkan semua ahli baru, permohonan, pertanyaan pelanggan dan jadual, serta menetapkan semula ke data demo asal sistem.'
+                      : 'If you encounter "LocalStorage Full" quota exceeded warnings when approving members or saving data, you can use this utility to clear the local browser storage. This will purge all newly registered caregivers, pending applications, client inquiries, and schedules, reverting the database to initial clean system defaults.'}
+                  </p>
+                  <button 
+                    onClick={handleResetDatabase}
+                    className="btn"
+                    style={{ 
+                      height: '40px',
+                      background: 'linear-gradient(135deg, var(--danger) 0%, #b91c1c 100%)',
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0 2rem',
+                      cursor: 'pointer',
+                      borderRadius: '8px',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                  >
+                    🚨 {lang === 'zh' ? '重置系统本地数据库' : lang === 'bm' ? 'Tetap Semula Pangkalan Data Sistem' : 'Reset System Local Database'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {activeTab === 'members' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Union Membership Registry Vetting</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>Union Membership Registry Vetting</h2>
+              <button 
+                onClick={() => { 
+                  setPendingMembers(store.getPendingMembers()); 
+                  alert('Vetting queue refreshed! / 申请列表已刷新！'); 
+                }} 
+                className="btn btn-outline" 
+                style={{ 
+                  fontSize: '0.8rem', 
+                  padding: '0.4rem 0.85rem', 
+                  height: '32px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.4rem',
+                  borderColor: 'rgba(255,255,255,0.15)',
+                  color: '#ffffff'
+                }}
+              >
+                🔄 Refresh List / 刷新列表
+              </button>
+            </div>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Audit qualifications and clearance forms. Click Details to verify medical diagnostics.</p>
 
             <div className="card" style={{ overflowX: 'auto', padding: '1rem' }}>
@@ -343,15 +1074,226 @@ export default function AdminPage() {
           </div>
         )}
 
+        {activeTab === 'unionMembers' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>MCSA Active Union Members Registry / 现役会员花名册</h2>
+                <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.95rem' }}>
+                  Registry of verified, active Malaysia care companions, confinement ladies, elder caregivers, rehab assistants, and babysitters.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button 
+                  onClick={() => { 
+                    setUnionMembers(store.getUnionMembers()); 
+                    alert('Union member list refreshed! / 盟友花名册已刷新！'); 
+                  }} 
+                  className="btn btn-outline" 
+                  style={{ 
+                    fontSize: '0.8rem', 
+                    padding: '0.4rem 0.85rem', 
+                    height: '38px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem',
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    color: '#ffffff'
+                  }}
+                >
+                  🔄 Refresh / 刷新
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const query = memberSearchQuery.toLowerCase().trim();
+              const filteredMembers = unionMembers.filter((m: any) => {
+                if (!query) return true;
+                return (
+                  (m.name || '').toLowerCase().includes(query) ||
+                  (m.member_number || '').toLowerCase().includes(query) ||
+                  (m.nric || '').toLowerCase().includes(query) ||
+                  (m.category || '').toLowerCase().includes(query) ||
+                  (m.location || '').toLowerCase().includes(query) ||
+                  (m.phone || '').toLowerCase().includes(query) ||
+                  (m.email || '').toLowerCase().includes(query)
+                );
+              });
+
+              return (
+                <>
+                  {/* Search and Export Actions Panel */}
+                  <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', background: 'rgba(15, 23, 42, 0.3)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <div style={{ flex: 1, minWidth: '280px', position: 'relative' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="🔍 Search name, ID, NRIC, category, phone, location... / 搜索姓名、会员号、身份证、类别、地区..."
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                        style={{ height: '40px', fontSize: '0.88rem', paddingLeft: '2.5rem', background: 'rgba(30, 41, 59, 0.5)' }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => exportToCSV(filteredMembers)}
+                      className="btn btn-primary"
+                      style={{
+                        height: '40px',
+                        padding: '0 1.25rem',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      📥 Export Excel / 导出表格 ({filteredMembers.length})
+                    </button>
+                  </div>
+
+                  <div className="card" style={{ overflowX: 'auto', padding: '1rem' }}>
+                    <table style={{ width: '100%', minWidth: '1000px' }}>
+                      <thead>
+                        <tr>
+                          <th>Member Profile</th>
+                          <th>Membership ID</th>
+                          <th>NRIC / ID Number</th>
+                          <th>Category / Role</th>
+                          <th>Contact details</th>
+                          <th>Primary Location</th>
+                          <th>Membership Validity</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredMembers.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              ❌ No matching members found. / 未找到符合条件的会员记录。
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredMembers.map((m: any) => (
+                            <tr key={m.id}>
+                              <td style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--accent)', backgroundColor: '#1e293b' }}>
+                                  <img src={m.photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <div>
+                                  <strong style={{ color: '#ffffff' }}>{m.name}</strong>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Exp: {m.exp}</div>
+                                </div>
+                              </td>
+                              <td>
+                                <span style={{ fontSize: '0.85rem', fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--primary)' }}>
+                                  {m.member_number}
+                                </span>
+                              </td>
+                              <td>
+                                <span style={{ fontSize: '0.85rem', fontFamily: 'monospace', color: '#cbd5e1' }}>
+                                  {m.nric || 'N/A'}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                                  {(m.category || '').split(',').map((cat: string, idx: number) => {
+                                    const trimmed = cat.trim();
+                                    return (
+                                      <span key={idx} className="badge badge-active" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--health)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                        {trimmed === 'Confinement Care' && '🍼 Confinement'}
+                                        {trimmed === 'Patient Companion' && '🏥 Companion'}
+                                        {trimmed === 'Elderly Caregiver' && '👴 Elderly'}
+                                        {trimmed === 'Rehabilitation Care Assistant' && '💪 Rehab'}
+                                        {trimmed === 'Babysitter Service' && '👶 Babysitter'}
+                                        {!['Confinement Care', 'Patient Companion', 'Elderly Caregiver', 'Rehabilitation Care Assistant', 'Babysitter Service'].includes(trimmed) && trimmed}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ fontSize: '0.82rem', color: '#ffffff' }}>{m.phone}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.email}</div>
+                              </td>
+                              <td><span style={{ fontSize: '0.82rem', color: '#ffffff' }}>{m.location}</span></td>
+                              <td>
+                                <span style={{ fontSize: '0.82rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
+                                  📅 {getValidityRange(m)}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                  <button 
+                                    onClick={() => {
+                                      setSelectedUnionCard(m);
+                                    }}
+                                    className="btn btn-outline" 
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                                  >
+                                    💳 Card
+                                  </button>
+                                  {m.icDocData ? (
+                                    <a 
+                                      href={m.icDocData} 
+                                      download={m.icDoc || 'NRIC_Copy.pdf'}
+                                      className="btn btn-outline" 
+                                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: 'var(--primary)', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center' }}
+                                    >
+                                      📁 ID Copy
+                                    </a>
+                                  ) : (
+                                    <button 
+                                      onClick={() => {
+                                        setSelectedMockIC(m);
+                                      }}
+                                      className="btn btn-outline" 
+                                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: 'rgba(255,255,255,0.15)', color: '#cbd5e1' }}
+                                    >
+                                      🛡️ MyKad
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => {
+                                      if (confirm(`Are you sure you want to remove ${m.name} from the active registry? This will de-license them.`)) {
+                                        const updated = unionMembers.filter((item: any) => item.id !== m.id);
+                                        store.setUnionMembers(updated);
+                                        setUnionMembers(updated);
+                                        alert(`${m.name} has been removed.`);
+                                      }
+                                    }}
+                                    className="btn btn-outline" 
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                                  >
+                                    🗑️ Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
         {activeTab === 'cases' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Match Dispatch & Case Assignments</h2>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Match Dispatch & Case Assignments / 智能匹配与派单管理</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Match incoming case requests to vetted, verified caregivers.</p>
 
             <div className="grid-cols-2">
               <div className="card">
-                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Active Dispatched Assignments</h3>
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem', color: '#ffffff' }}>Active Dispatched Assignments / 现役已派单订单</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Default mock assignments */}
                   <div style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'rgba(30,41,59,0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
                       <strong style={{ color: '#ffffff', fontSize: '1.05rem' }}>Grandpa Zhang (Chronic Care)</strong>
@@ -366,23 +1308,225 @@ export default function AdminPage() {
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Assigned Caregiver: Meizhen Chen (MCSA-2026-1112)</p>
                   </div>
+
+                  {/* Dynamically assigned assignments */}
+                  {careRequests.filter((r: any) => r.status === 'accepted').map((r: any) => (
+                    <div key={r.id} style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'rgba(30, 41, 59, 0.5)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
+                        <strong style={{ color: '#ffffff', fontSize: '1.05rem' }}>{r.name} ({r.category})</strong>
+                        <span className="badge badge-active">Active Shift</span>
+                      </div>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Assigned Caregiver: {r.assignedCaregiver || 'Vetted Caregiver'}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', margin: '0.25rem 0 0 0' }}>Location: {r.location || 'Kuala Lumpur'} | Date: {r.date}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem' }}>Smart Match Suggestion Engine</h3>
-                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
-                    Execute algorithms factoring in hospital coordinates, caregiver specialized categories, and clinical ratings.
+                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem', color: '#ffffff' }}>Smart Match Suggestion Engine / 智能配单推荐系统</h3>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 1.5rem 0' }}>
+                    Execute matching algorithms factoring in hospital coordinates, caregiver specialized categories, and clinical ratings.
                   </p>
+
+                  {/* Dropdown to select a pending care request */}
+                  {(() => {
+                    const pendingRequests = careRequests.filter((r: any) => r.status !== 'accepted');
+                    if (pendingRequests.length === 0) {
+                      return (
+                        <div style={{ padding: '2rem', textAlign: 'center', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                          <span style={{ fontSize: '2rem' }}>🎉</span>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>
+                            All dispatches assigned! / 所有需求均已分发。
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                            Select Pending Client Request / 选择待派单的客户需求：
+                          </label>
+                          <select
+                            className="form-input"
+                            value={selectedMatchRequestId}
+                            onChange={(e) => {
+                              setSelectedMatchRequestId(e.target.value);
+                              setShowMatchResults(false);
+                            }}
+                            style={{ height: '42px', fontSize: '0.88rem', background: '#334155', color: '#fff', cursor: 'pointer' }}
+                          >
+                            <option value="">-- Choose pending request / 请选择需求 --</option>
+                            {pendingRequests.map((r: any) => (
+                              <option key={r.id} value={r.id}>
+                                {r.name} - {r.category} ({r.location || 'Selangor/KL'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {selectedMatchRequestId && (() => {
+                          const selectedReq = pendingRequests.find(r => r.id === selectedMatchRequestId);
+                          if (!selectedReq) return null;
+                          return (
+                            <div style={{ padding: '1rem', background: 'rgba(15, 23, 42, 0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.85rem', color: '#cbd5e1' }}>
+                              <p style={{ margin: '0 0 0.5rem 0' }}>📝 <strong>Client Needs:</strong> {selectedReq.message}</p>
+                              <p style={{ margin: 0 }}>📅 <strong>Requested Date:</strong> {selectedReq.date || '2026-06-05'}</p>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Smart Match Execution button */}
+                        <button 
+                          onClick={() => {
+                            if (!selectedMatchRequestId) {
+                              alert('Please select a pending request first.');
+                              return;
+                            }
+                            setShowMatchResults(true);
+                          }} 
+                          disabled={!selectedMatchRequestId}
+                          className="btn btn-primary"
+                          style={{ 
+                            width: '100%', 
+                            background: 'linear-gradient(135deg, var(--accent) 0%, #d97706 100%)', 
+                            boxShadow: '0 4px 14px var(--accent-glow)',
+                            opacity: selectedMatchRequestId ? 1 : 0.5,
+                            cursor: selectedMatchRequestId ? 'pointer' : 'not-allowed'
+                          }}
+                        >
+                          ⚡ Execute Smart Match Recommendation / 执行智能配单推荐
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
-                <button 
-                  onClick={() => alert('Big data algorithm executed. Best matches computed.')} 
-                  className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '1.5rem', background: 'linear-gradient(135deg, var(--accent) 0%, #d97706 100%)', boxShadow: '0 4px 14px var(--accent-glow)' }}
-                >
-                  ⚡ Execute Smart Match Recommendation
-                </button>
+
+                {/* Recommendations list (displayed after executing match) */}
+                {showMatchResults && selectedMatchRequestId && (() => {
+                  const req = careRequests.find(r => r.id === selectedMatchRequestId);
+                  if (!req) return null;
+
+                  // Execute simple matching algorithm
+                  // Category match = +30 points, Location match = +15 points, ratings = random/deterministic mock
+                  const getMockCaregiverDetails = (name: string) => {
+                    if (name === 'Li Xiulan') return { rating: 4.8, reviews: 32, stars: '⭐⭐⭐⭐☆' };
+                    if (name === 'Meizhen Chen') return { rating: 5.0, reviews: 48, stars: '⭐⭐⭐⭐⭐' };
+                    return { rating: 4.7, reviews: 15, stars: '⭐⭐⭐⭐☆' };
+                  };
+
+                  const computedRecommendations = unionMembers.map((m: any) => {
+                    const details = getMockCaregiverDetails(m.name);
+                    const catMatch = (m.category || '').toLowerCase().includes(req.category.toLowerCase().split(' ')[0]);
+                    const reqLocation = (req.location || 'Selangor').toLowerCase();
+                    const mLocation = (m.location || 'KL').toLowerCase();
+                    const locMatch = reqLocation.includes(mLocation) || mLocation.includes(reqLocation) || req.message.toLowerCase().includes(mLocation.split(',')[0].trim());
+
+                    let score = 50;
+                    if (catMatch) score += 30;
+                    if (locMatch) score += 15;
+                    score += Math.round((details.rating - 4.0) * 6);
+                    if (score > 98) score = 98; // maximum match score representation
+
+                    return {
+                      caregiver: m,
+                      score: score,
+                      details: details,
+                      catMatch: catMatch,
+                      locMatch: locMatch
+                    };
+                  }).sort((a, b) => b.score - a.score);
+
+                  return (
+                    <div className="animate-fade-in" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem' }}>
+                      <h4 style={{ color: '#ffffff', margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800 }}>
+                        📊 Top Matches for {req.name} (最佳推荐看护人列表)
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {computedRecommendations.map((rec: any) => (
+                          <div 
+                            key={rec.caregiver.id} 
+                            style={{ 
+                              padding: '1rem', 
+                              borderRadius: '12px', 
+                              background: 'rgba(255,255,255,0.02)', 
+                              border: `1.5px solid ${rec.score >= 85 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)'}`,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.75rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--accent)' }}>
+                                  <img src={rec.caregiver.photo} alt={rec.caregiver.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <div>
+                                  <strong style={{ color: '#ffffff', fontSize: '0.92rem' }}>{rec.caregiver.name}</strong>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                    {rec.caregiver.category} ({rec.caregiver.exp} exp)
+                                  </div>
+                                </div>
+                              </div>
+                              <span 
+                                className="badge" 
+                                style={{ 
+                                  fontSize: '0.68rem', 
+                                  padding: '0.15rem 0.5rem', 
+                                  backgroundColor: rec.score >= 85 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
+                                  color: rec.score >= 85 ? 'var(--health)' : 'var(--text-muted)',
+                                  border: rec.score >= 85 ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.05)'
+                                }}
+                              >
+                                {rec.score}% Match
+                              </span>
+                            </div>
+
+                            {/* Ratings & Matching Criteria Display */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                                <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>
+                                  {rec.details.stars} <span style={{ color: '#ffffff', fontSize: '0.75rem' }}>{rec.details.rating}</span>
+                                </span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                  {rec.details.reviews} clinical reviews / 临床评价
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', textAlign: 'right', fontSize: '0.72rem' }}>
+                                <span style={{ color: rec.catMatch ? 'var(--health)' : 'var(--danger)' }}>
+                                  {rec.catMatch ? '✅ Category Matches / 类别契合' : '❌ Mismatch / 类别不符'}
+                                </span>
+                                <span style={{ color: rec.locMatch ? 'var(--health)' : 'var(--text-muted)' }}>
+                                  {rec.locMatch ? '✅ Area Proximity / 距离接近' : '⚠️ Area Mismatch / 跨区域'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Dispatch Action button */}
+                            <button
+                              onClick={() => handleAssignCaregiver(req, rec.caregiver)}
+                              className="btn btn-outline"
+                              style={{
+                                width: '100%',
+                                padding: '0.4rem',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                borderColor: 'var(--health)',
+                                color: 'var(--health)',
+                                background: 'rgba(16, 185, 129, 0.02)'
+                              }}
+                            >
+                              🤝 Confirm Dispatch & Sync Shift / 确认派单并同步排班
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -434,65 +1578,227 @@ export default function AdminPage() {
         {activeTab === 'library' && (
           <div>
             <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Hospital Guidelines & SOP Library</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Publish new floor guides and outpatient routing lists to active caregiver databases.</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Manage hospital floor guides, states categorization, and routing maps for caregiver operations.</p>
 
             <div className="grid-cols-2">
+              {/* Form panel: Publish or Update */}
               <div className="card">
-                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Publish New Guide SOP</h3>
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem', color: '#ffffff' }}>
+                  {editItemId ? '✏️ Edit Hospital Guide SOP' : '➕ Publish New Guide SOP'}
+                </h3>
                 <form onSubmit={publishLibItem}>
                   <div className="form-group">
-                    <label className="form-label">Resource Title</label>
+                    <label className="form-label">Resource Title / 医院及地图名称</label>
                     <input 
                       type="text" 
                       required 
                       className="form-input" 
-                      placeholder="e.g. Prince Court Medical Map SOP"
+                      placeholder="e.g. Hospital Kuala Lumpur cardiology route map"
                       value={newLibTitle}
                       onChange={(e) => setNewLibTitle(e.target.value)}
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Format Type</label>
-                    <select 
-                      className="form-input"
-                      style={{ background: 'var(--bg-input)', color: 'white', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
-                      value={newLibType}
-                      onChange={(e) => setNewLibType(e.target.value)}
-                    >
-                      <option value="PDF Document">PDF Document</option>
-                      <option value="Image Map">Image Map</option>
-                      <option value="Spreadsheet Log">Spreadsheet Log</option>
-                    </select>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Malaysia State / 所属州属</label>
+                      <select 
+                        className="form-input"
+                        style={{ background: 'var(--bg-input)', color: 'white', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
+                        value={newLibState}
+                        onChange={(e) => setNewLibState(e.target.value)}
+                      >
+                        {['Kuala Lumpur', 'Selangor', 'Penang', 'Johor', 'Sarawak', 'Sabah', 'Perak', 'Pahang', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Perlis', 'Terengganu'].map(st => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Format Type / 格式文件</label>
+                      <select 
+                        className="form-input"
+                        style={{ background: 'var(--bg-input)', color: 'white', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
+                        value={newLibType}
+                        onChange={(e) => setNewLibType(e.target.value)}
+                      >
+                        <option value="Image Map">Image Map (JPG/PNG)</option>
+                        <option value="PDF Document">PDF Document</option>
+                        <option value="Spreadsheet Log">Spreadsheet Log</option>
+                      </select>
+                    </div>
                   </div>
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                    🚀 Publish and Notify Caregivers
-                  </button>
+
+                  {/* File Upload Section */}
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label className="form-label">Upload Hospital block map (JPG/PNG) / 上传医院地图文件</label>
+                    
+                    <div style={{
+                      border: '2px dashed rgba(255,255,255,0.15)',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: '12px',
+                      padding: '1.5rem 1rem',
+                      textAlign: 'center',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleLibFileChange}
+                        style={{
+                          opacity: 0,
+                          position: 'absolute',
+                          top: 0, left: 0, right: 0, bottom: 0,
+                          cursor: 'pointer',
+                          width: '100%',
+                          height: '100%'
+                        }}
+                      />
+                      
+                      {newLibImage ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--primary)' }}>
+                            <img src={newLibImage} alt="Selected preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                          <span style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: 600 }}>{newLibFileName || 'Selected Map Image'}</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{newLibFileSize}</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <span style={{ fontSize: '1.8rem', marginBottom: '0.25rem' }}>📁</span>
+                          <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>Click to browse JPG map</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Supports JPG, JPEG, PNG</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                      {editItemId ? '💾 Update Map Details / 保存修改' : '🚀 Publish and Notify Caregivers / 发布'}
+                    </button>
+                    {editItemId && (
+                      <button type="button" onClick={handleCancelEdit} className="btn btn-outline" style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' }}>
+                        Cancel / 取消
+                      </button>
+                    )}
+                  </div>
                 </form>
+
+                {/* Batch import json */}
+                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1.5px dashed rgba(255,255,255,0.06)' }}>
+                  <h4 style={{ fontSize: '1rem', color: 'var(--accent)', marginBottom: '0.5rem', fontWeight: 700 }}>⚡ Batch Import 50+ Hospitals (.json)</h4>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.4 }}>
+                    Instantly load dozens of hospital records, coordinates, and routes using a structured JSON list file.
+                  </p>
+                  <input type="file" accept=".json" onChange={handleBatchImport} style={{ display: 'none' }} id="batch-json-upload" />
+                  <label htmlFor="batch-json-upload" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 700 }}>
+                    📥 Upload JSON Batch List / 导入JSON数据列表
+                  </label>
+                </div>
               </div>
 
+              {/* Published Items List panel */}
               <div className="card">
-                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Published Resources</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  {libItems.map((item) => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)', padding: '1rem', borderRadius: '10px', background: 'rgba(255,255,255,0.01)' }}>
-                      <div>
-                        <strong style={{ color: '#ffffff', fontSize: '0.95rem' }}>{item.title}</strong>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{item.type} &bull; {item.size}</div>
+                <h3 style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Published Resources</h3>
+                
+                {/* Search & State Filters */}
+                <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="🔍 Search hospital maps..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="form-input"
+                    style={{ flex: 1, padding: '0.5rem 0.75rem', fontSize: '0.85rem', height: '36px' }}
+                  />
+                  <select
+                    value={stateFilter}
+                    onChange={(e) => setStateFilter(e.target.value)}
+                    className="form-input"
+                    style={{ width: '130px', padding: '0.5rem', fontSize: '0.85rem', height: '36px', background: 'var(--bg-input)', color: '#fff', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer' }}
+                  >
+                    <option value="">All States</option>
+                    {['Kuala Lumpur', 'Selangor', 'Penang', 'Johor', 'Sarawak', 'Sabah', 'Perak', 'Pahang', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Perlis', 'Terengganu'].map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '550px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {(() => {
+                    const filtered = libItems.filter((item) => {
+                      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+                      const matchesState = stateFilter === '' || item.state === stateFilter;
+                      return matchesSearch && matchesState;
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div style={{ textAlign: 'center', opacity: 0.5, padding: '2rem 0' }}>
+                          <span style={{ fontSize: '1.5rem' }}>🔍</span>
+                          <p style={{ fontSize: '0.82rem', margin: '0.5rem 0 0 0' }}>No matching resources found.</p>
+                        </div>
+                      );
+                    }
+
+                    return filtered.map((item) => (
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.01)', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', minWidth: 0, flex: 1 }}>
+                          {item.imageUrl ? (
+                            <div style={{ width: '54px', height: '54px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0, backgroundColor: '#0f172a' }}>
+                              <img src={item.imageUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          ) : (
+                            <div style={{ width: '54px', height: '54px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ fontSize: '1.2rem' }}>📄</span>
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <strong style={{ color: '#ffffff', fontSize: '0.92rem', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {item.title}
+                            </strong>
+                            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                              <span className="badge badge-active" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'var(--primary-glow)', color: 'var(--primary)' }}>
+                                {item.state || 'Kuala Lumpur'}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                {item.type} &bull; {item.size}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0 }}>
+                          <button 
+                            onClick={() => handleEditLibItem(item)}
+                            className="btn btn-outline" 
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', borderColor: 'var(--primary)', color: 'var(--primary)', fontWeight: 600 }}
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const updated = libItems.filter(l => l.id !== item.id);
+                              store.setLibItems(updated);
+                              setLibItems(updated);
+                              alert('Deleted guide.');
+                            }}
+                            className="btn btn-outline" 
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', borderColor: 'var(--danger)', color: 'var(--danger)', fontWeight: 600 }}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      <button 
-                        onClick={() => {
-                          const updated = libItems.filter(l => l.id !== item.id);
-                          store.setLibItems(updated);
-                          setLibItems(updated);
-                          alert('Deleted guide.');
-                        }}
-                        className="btn btn-outline" 
-                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
@@ -553,20 +1859,123 @@ export default function AdminPage() {
               {/* Form 2: Activity Photos */}
               <div className="card">
                 <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem' }}>Add Activity Gallery Photo</h3>
+                
+                {/* Upload Mode Selector Tab */}
+                <div style={{
+                  display: 'flex',
+                  background: 'rgba(15, 23, 42, 0.4)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  padding: '0.25rem',
+                  borderRadius: '10px',
+                  marginBottom: '1.25rem'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => { setPhotoTab('upload'); setPhotoUrl(''); setPhotoFileName(''); }}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      background: photoTab === 'upload' ? '#2563eb' : 'transparent',
+                      color: photoTab === 'upload' ? '#ffffff' : 'var(--text-muted)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    📁 Local Upload / 本地上传
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPhotoTab('url'); setPhotoUrl(''); setPhotoFileName(''); }}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      background: photoTab === 'url' ? '#2563eb' : 'transparent',
+                      color: photoTab === 'url' ? '#ffffff' : 'var(--text-muted)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    🔗 Image URL / 图片链接
+                  </button>
+                </div>
+
                 <form onSubmit={addActivityPhoto}>
-                  <div className="form-group">
-                    <label className="form-label">Photo Image URL</label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="form-input" 
-                      placeholder="e.g. /activity-center.jpg or custom HTTPS URL"
-                      value={photoUrl}
-                      onChange={(e) => setPhotoUrl(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Caption / Description</label>
+                  {photoTab === 'upload' ? (
+                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                      <label className="form-label">UPLOAD PHOTO FILE / 选择本地图片</label>
+                      <div style={{
+                        border: '2px dashed rgba(255,255,255,0.1)',
+                        padding: '1.5rem',
+                        borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.02)',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.borderColor = 'rgba(37,99,235,0.4)'}
+                      onMouseOut={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                      >
+                        <input 
+                          type="file" 
+                          required={!photoUrl}
+                          accept="image/*"
+                          onChange={handleGalleryPhotoFileChange}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            opacity: 0,
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          {photoFileName ? (
+                            <div>
+                              <span style={{ color: 'white', fontWeight: 'bold' }}>{photoFileName}</span>
+                              <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--accent)', marginTop: '0.25rem' }}>{photoFileSize}</span>
+                            </div>
+                          ) : (
+                            <div>
+                              <span>📁 Drag & Drop or Click to Select / 拖拽或点击上传</span>
+                              <span style={{ display: 'block', fontSize: '0.7rem', marginTop: '0.25rem' }}>(Supports JPG, PNG. Dynamic Compression)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {photoUrl && photoUrl.startsWith('data:image') && (
+                        <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center' }}>
+                          <img src={photoUrl} alt="Preview" style={{ maxHeight: '110px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', objectFit: 'contain' }} />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                      <label className="form-label">Photo Image URL / 图片网址</label>
+                      <input 
+                        type="text" 
+                        required 
+                        className="form-input" 
+                        placeholder="e.g. /activity-center.jpg or custom HTTPS URL"
+                        value={photoUrl}
+                        onChange={(e) => setPhotoUrl(e.target.value)}
+                        style={{ height: '40px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <label className="form-label">Caption / Description / 照片说明</label>
                     <input 
                       type="text" 
                       required 
@@ -574,10 +1983,17 @@ export default function AdminPage() {
                       placeholder="e.g. Practical Skills Assessment Room"
                       value={photoCaption}
                       onChange={(e) => setPhotoCaption(e.target.value)}
+                      style={{ height: '40px', fontSize: '0.85rem' }}
                     />
                   </div>
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                    📸 Add Gallery Image
+
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', height: '40px', fontWeight: 700, fontSize: '0.88rem' }}
+                    disabled={!photoUrl}
+                  >
+                    📸 Add Gallery Image / 添加至相册
                   </button>
                 </form>
               </div>
@@ -638,8 +2054,8 @@ export default function AdminPage() {
 
         {activeTab === 'escortForms' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Medical Escort Client Forms Dashboard / 陪诊协议与建档记录</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>View client information sheets and liability agreements submitted by caregivers.</p>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Patient Profiles & Escort Agreements / 病人记录与服务协议</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>View patient information sheets, health history profiles, and medical escort agreements.</p>
 
             {selectedEscortForm ? (
               <div>
@@ -655,6 +2071,7 @@ export default function AdminPage() {
                   {/* Digital Signature & Form Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <img src="/aplus-assist-logo.jpg" alt="A+ Assist" style={{ width: '50px', height: '50px', backgroundColor: '#0d162d', borderRadius: '50%', padding: '2px', border: '1px solid rgba(255,255,255,0.1)', objectFit: 'contain' }} />
                       <img src="/mcsa-logo.png" alt="MCSA" style={{ width: '50px', height: '50px', backgroundColor: 'white', borderRadius: '50%', padding: '2px' }} />
                       <div>
                         <h3 style={{ color: '#ffffff', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
@@ -812,7 +2229,11 @@ export default function AdminPage() {
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Escort Service Provider / 陪诊师</span>
                         <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#60a5fa', margin: '0.9rem 0' }}>
-                          🛡️ Verified Caregiver Escort
+                          🛡️ {(() => {
+                            const members = store.getUnionMembers();
+                            const found = members.find((m: any) => m.id === selectedEscortForm.caregiverId || m.member_number === selectedEscortForm.caregiverId || m.name.toLowerCase().includes(String(selectedEscortForm.caregiverId || '').toLowerCase()));
+                            return found ? `${found.name} (${found.member_number})` : (selectedEscortForm.caregiverId || 'Unassigned');
+                          })()}
                         </div>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Status / 执照状态: Active Licensed Vetted</span>
                       </div>
@@ -826,6 +2247,7 @@ export default function AdminPage() {
                   <thead>
                     <tr>
                       <th>Client Name</th>
+                      <th>Companion / 陪诊人员</th>
                       <th>Appointment Date</th>
                       <th>Medical Facility</th>
                       <th>Emergency Contact</th>
@@ -838,6 +2260,20 @@ export default function AdminPage() {
                         <td>
                           <strong style={{ color: '#ffffff' }}>{f.fullName}</strong>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.gender} &bull; {f.nric}</div>
+                        </td>
+                        <td>
+                          {(() => {
+                            const members = store.getUnionMembers();
+                            const found = members.find((m: any) => m.id === f.caregiverId || m.member_number === f.caregiverId || m.name.toLowerCase().includes(String(f.caregiverId || '').toLowerCase()));
+                            return found ? (
+                              <div>
+                                <strong style={{ color: '#ffffff' }}>{found.name}</strong>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>ID: {found.member_number}</div>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>{f.caregiverId || 'Unassigned'}</span>
+                            );
+                          })()}
                         </td>
                         <td>
                           <span style={{ color: '#ffffff', fontWeight: 600 }}>{f.appointmentDate}</span>
@@ -1014,17 +2450,27 @@ export default function AdminPage() {
                       margin: '0.2rem 0 0 0'
                     }}>{selectedMember.email}</p>
                   </div>
-                  <span className="badge badge-pending" style={{
-                    padding: '0.4rem 0.95rem',
-                    borderRadius: '20px',
-                    fontWeight: 700,
-                    fontSize: '0.75rem'
-                  }}>
-                    {selectedMember.category === 'Confinement Care' && 'Confinement Care / 月嫂'}
-                    {selectedMember.category === 'Patient Companion' && 'Patient Companion / 陪诊员'}
-                    {selectedMember.category === 'Elderly Caregiver' && 'Elderly Caregiver / 养老护理员'}
-                    {selectedMember.category === 'Rehabilitation Care Assistant' && 'Rehabilitation Care Assistant / 康复助理'}
-                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                    {(selectedMember.category || '').split(',').map((catStr: string, idx: number) => {
+                      const cat = catStr.trim();
+                      return (
+                        <span key={idx} className="badge badge-pending" style={{
+                          padding: '0.4rem 0.95rem',
+                          borderRadius: '20px',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          margin: 0
+                        }}>
+                          {cat === 'Confinement Care' && 'Confinement Care / 月嫂 / 坐月护理'}
+                          {cat === 'Patient Companion' && 'Patient Companion / 陪诊员 / 就医陪诊'}
+                          {cat === 'Elderly Caregiver' && 'Elderly Caregiver / 养老护理员'}
+                          {cat === 'Rehabilitation Care Assistant' && 'Rehabilitation Care Assistant / 康复助理'}
+                          {cat === 'Babysitter Service' && 'Babysitter Service / 专业保姆'}
+                          {!['Confinement Care', 'Patient Companion', 'Elderly Caregiver', 'Rehabilitation Care Assistant', 'Babysitter Service'].includes(cat) && cat}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <hr style={{
@@ -1073,6 +2519,18 @@ export default function AdminPage() {
                     <strong style={{
                       color: '#ffffff'
                     }}>{selectedMember.phone}</strong>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span style={{
+                      color: 'var(--text-muted)'
+                    }}>NRIC / ID:</span>
+                    <strong style={{
+                      color: 'var(--accent)',
+                      fontFamily: 'monospace'
+                    }}>{selectedMember.nric || 'N/A'}</strong>
                   </div>
                 </div>
 
@@ -1130,9 +2588,16 @@ export default function AdminPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      color: 'var(--health)'
+                      color: docTab === 'icDoc' ? 'var(--accent)' : 'var(--health)'
                     }}>
-                      <CheckCircle2 size={16} /> <span>Identity / NRIC Match Verified</span>
+                      {docTab === 'icDoc' ? <span style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid var(--accent)',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                      }}></span> : <CheckCircle2 size={16} />}
+                      <span>Identity / NRIC Match Verified</span>
                     </div>
                     <div style={{
                       display: 'flex',
@@ -1179,18 +2644,42 @@ export default function AdminPage() {
                 {/* Tab Selector */}
                 <div style={{
                   display: 'flex',
+                  flexWrap: 'wrap',
                   backgroundColor: 'rgba(15, 23, 42, 0.6)',
                   padding: '0.5rem 1rem 0 1rem',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)'
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  gap: '0.25rem'
                 }}>
+                  <button
+                    onClick={() => setDocTab('icDoc')}
+                    style={{
+                      padding: '0.85rem 1.25rem',
+                      border: 'none',
+                      background: docTab === 'icDoc' ? 'var(--bg-card)' : 'transparent',
+                      borderRadius: '12px 12px 0 0',
+                      fontSize: '0.88rem',
+                      fontWeight: 700,
+                      color: docTab === 'icDoc' ? '#ffffff' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      borderTop: docTab === 'icDoc' ? '3px solid var(--primary)' : '3px solid transparent',
+                      marginTop: '-3px',
+                      transition: 'all 0.2s',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    🛡️ ID Card / IC Copy
+                  </button>
                   <button
                     onClick={() => setDocTab('cert')}
                     style={{
-                      padding: '0.85rem 1.5rem',
+                      padding: '0.85rem 1.25rem',
                       border: 'none',
                       background: docTab === 'cert' ? 'var(--bg-card)' : 'transparent',
                       borderRadius: '12px 12px 0 0',
-                      fontSize: '0.9rem',
+                      fontSize: '0.88rem',
                       fontWeight: 700,
                       color: docTab === 'cert' ? '#ffffff' : 'var(--text-muted)',
                       cursor: 'pointer',
@@ -1199,19 +2688,20 @@ export default function AdminPage() {
                       transition: 'all 0.2s',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.4rem'
+                      gap: '0.4rem',
+                      whiteSpace: 'nowrap'
                     }}
                   >
-                    📜 Qualification Certificate ({selectedMember.proof})
+                    📜 Qualification Certificate
                   </button>
                   <button
                     onClick={() => setDocTab('health')}
                     style={{
-                      padding: '0.85rem 1.5rem',
+                      padding: '0.85rem 1.25rem',
                       border: 'none',
                       background: docTab === 'health' ? 'var(--bg-card)' : 'transparent',
                       borderRadius: '12px 12px 0 0',
-                      fontSize: '0.9rem',
+                      fontSize: '0.88rem',
                       fontWeight: 700,
                       color: docTab === 'health' ? '#ffffff' : 'var(--text-muted)',
                       cursor: 'pointer',
@@ -1220,10 +2710,11 @@ export default function AdminPage() {
                       transition: 'all 0.2s',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.4rem'
+                      gap: '0.4rem',
+                      whiteSpace: 'nowrap'
                     }}
                   >
-                    🏥 Health Clearance ({selectedMember.healthCert})
+                    🏥 Health Clearance
                   </button>
                 </div>
 
@@ -1236,381 +2727,583 @@ export default function AdminPage() {
                   justifyContent: 'center',
                   alignItems: 'flex-start'
                 }}>
-                  {docTab === 'cert' ? (
-                    /* Professional Certificate CSS Render */
-                    <div style={{
-                      width: '100%',
-                      maxWidth: '640px',
-                      background: 'linear-gradient(135deg, #fdfbf7 0%, #f6f1e5 100%)',
-                      border: '15px double #c5a880',
-                      boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
-                      padding: '3rem 2rem',
-                      borderRadius: '8px',
-                      position: 'relative',
-                      textAlign: 'center',
-                      color: '#3e2723',
-                      fontFamily: 'Outfit, Georgia, serif'
-                    }}>
-                      {/* Vintage Corner Accents */}
-                      <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '2px solid #c5a880', borderLeft: '2px solid #c5a880' }}></div>
-                      <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '2px solid #c5a880', borderRight: '2px solid #c5a880' }}></div>
-                      <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '2px solid #c5a880', borderLeft: '2px solid #c5a880' }}></div>
-                      <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '2px solid #c5a880', borderRight: '2px solid #c5a880' }}></div>
-
-                      {/* Ribbon Logo */}
-                      <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#c5a880' }}>🏅</div>
-
-                      <h4 style={{
-                        fontSize: '1.1rem',
-                        letterSpacing: '0.1em',
-                        color: '#5d4037',
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        margin: '0 0 0.5rem 0',
-                        fontFamily: 'Outfit, sans-serif'
-                      }}>
-                        Malaysia Care & Confinement Board
-                      </h4>
-                      <p style={{
-                        fontSize: '0.75rem',
-                        letterSpacing: '0.05em',
-                        color: '#8d6e63',
-                        fontStyle: 'italic',
-                        margin: '0 0 2rem 0'
-                      }}>
-                        Accredited Caregiver Guild of MultiCare Support Malaysia Union
-                      </p>
-
-                      <h2 style={{
-                        fontSize: '1.8rem',
-                        color: '#3e2723',
-                        fontWeight: 'bold',
-                        margin: '0 0 1rem 0',
-                        fontFamily: 'Outfit, sans-serif'
-                      }}>
-                        Certificate of Competency
-                      </h2>
-                      
-                      <p style={{
-                        fontSize: '0.9rem',
-                        color: '#5d4037',
-                        margin: '0 0 1.5rem 0'
-                      }}>
-                        This professional qualification is awarded to
-                      </p>
-
-                      <h3 style={{
-                        fontSize: '1.6rem',
-                        fontFamily: 'Georgia, serif',
-                        textDecoration: 'underline',
-                        color: '#1e3a8a',
-                        margin: '0 0 1.5rem 0',
-                        fontWeight: 'bold'
-                      }}>
-                        {selectedMember.name}
-                      </h3>
-
-                      <p style={{
-                        fontSize: '0.85rem',
-                        lineHeight: '1.6',
-                        color: '#5d4037',
-                        maxWidth: '480px',
-                        margin: '0 auto 2rem auto'
-                      }}>
-                        having demonstrated exceptional knowledge, compliance, and clinical hours in:
-                        <br />
-                        <strong style={{
-                          color: '#1e3a8a',
-                          fontSize: '1.05rem'
-                        }}>
-                          {selectedMember.category === 'Confinement Care' && 'Confinement Care & Neonatal Support (月嫂)'}
-                          {selectedMember.category === 'Patient Companion' && 'Patient Medical Accompaniment & Clinic Protocol (陪诊人员)'}
-                          {selectedMember.category === 'Elderly Caregiver' && 'Geriatric Support & Elder Care Management (养老护理人员)'}
-                          {selectedMember.category === 'Rehabilitation Care Assistant' && 'Rehabilitation Care Assistant (康复助理)'}
-                        </strong>
-                        <br />
-                        and meeting all training milestones required by MCSA Union policies.
-                      </p>
-
-                      {/* Footer of Certificate */}
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginTop: '1.5rem',
-                        padding: '0 1rem'
-                      }}>
-                        <div style={{
-                          textAlign: 'left'
-                        }}>
-                          <div style={{
-                            fontSize: '0.8rem',
-                            fontFamily: 'Georgia, serif',
-                            fontStyle: 'italic',
-                            textDecoration: 'underline'
-                          }}>Dr. Raymond Chen</div>
-                          <div style={{
-                            fontSize: '0.65rem',
-                            color: '#8d6e63'
-                          }}>Guild Registry Director</div>
-                        </div>
-
-                        {/* Red Gold Seal */}
-                        <div style={{
-                          width: '75px',
-                          height: '75px',
-                          borderRadius: '50%',
-                          background: 'radial-gradient(circle, #e53935 0%, #b71c1c 100%)',
-                          border: '3px dotted #c5a880',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#c5a880',
-                          fontSize: '0.55rem',
-                          fontWeight: 'bold',
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-                          transform: 'rotate(-5deg)'
-                        }}>
-                          <span>MCSA</span>
-                          <span>VERIFIED</span>
-                          <span style={{
-                            fontSize: '0.45rem'
-                          }}>2026</span>
-                        </div>
-
-                        <div style={{
-                          textAlign: 'right'
-                        }}>
-                          <div style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 'bold'
-                          }}>MCSA-GP-{selectedMember.id}</div>
-                          <div style={{
-                            fontSize: '0.65rem',
-                            color: '#8d6e63'
-                          }}>License Expiry: May 2027</div>
-                        </div>
+                  {docTab === 'icDoc' ? (
+                    selectedMember.icDocData ? (
+                      /* User Uploaded IC Document Preview */
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: '#1f2937', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Uploaded NRIC / IC Document Copy: <strong style={{ color: 'white' }}>{selectedMember.icDoc}</strong></span>
+                        {selectedMember.icDocData.startsWith('data:image/') ? (
+                          <img src={selectedMember.icDocData} alt={selectedMember.icDoc} style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', objectFit: 'contain' }} />
+                        ) : (
+                          <iframe src={selectedMember.icDocData} title={selectedMember.icDoc} style={{ width: '100%', height: '420px', borderRadius: '8px', border: 'none', background: 'white' }} />
+                        )}
+                        <a href={selectedMember.icDocData} download={selectedMember.icDoc} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+                          📥 Download ID Document
+                        </a>
                       </div>
-
-                      {/* Audit Overlay Stamp */}
+                    ) : (
+                      /* Malaysian NRIC MyKad CSS Render */
                       <div style={{
-                        position: 'absolute',
-                        top: '15%',
-                        right: '10%',
-                        border: '4px solid #2e7d32',
-                        color: '#2e7d32',
-                        padding: '0.5rem 1rem',
-                        fontSize: '1.2rem',
-                        fontWeight: 'bold',
-                        textTransform: 'uppercase',
-                        transform: 'rotate(15deg)',
-                        borderRadius: '6px',
-                        backgroundColor: 'rgba(232, 245, 233, 0.85)',
-                        pointerEvents: 'none'
-                      }}>
-                        ✅ CREDENTIAL MATCH
-                      </div>
-                    </div>
-                  ) : (
-                    /* Health Screening Report CSS Render */
-                    <div style={{
-                      width: '100%',
-                      maxWidth: '640px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
-                      padding: '2.5rem 2rem',
-                      borderRadius: '8px',
-                      color: '#1e293b',
-                      fontFamily: 'monospace, Courier, monospace'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        borderBottom: '2px solid #0284c7',
-                        paddingBottom: '1rem',
-                        marginBottom: '1.5rem'
-                      }}>
-                        <div>
-                          <h3 style={{
-                            margin: 0,
-                            color: '#0284c7',
-                            fontFamily: 'monospace',
-                            fontSize: '1.1rem',
-                            fontWeight: 'bold'
-                          }}>
-                            🏥 CLINICAL HEALTH AUDIT SHEET
-                          </h3>
-                          <p style={{
-                            margin: 0,
-                            fontSize: '0.7rem',
-                            color: '#64748b'
-                          }}>
-                            Poliklinik & Surgeri Union-Cares Group Malaysia
-                          </p>
-                        </div>
-                        <div style={{
-                          textAlign: 'right',
-                          fontSize: '0.7rem',
-                          color: '#64748b'
-                        }}>
-                          <div>Report Ref: HSR-2026-{selectedMember.id}</div>
-                          <div>Date: 12th May 2026</div>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '0.75rem',
-                        fontSize: '0.8rem',
-                        marginBottom: '1.5rem',
-                        backgroundColor: '#f8fafc',
-                        padding: '0.75rem',
-                        borderRadius: '6px'
-                      }}>
-                        <div><strong>Patient Name:</strong> {selectedMember.name}</div>
-                        <div><strong>Application Cat:</strong> {selectedMember.category}</div>
-                        <div><strong>Vetting Protocol:</strong> MCSA Guild Form 4B</div>
-                        <div><strong>Status:</strong> COMPLETED & VOUCHED</div>
-                      </div>
-
-                      <table style={{
                         width: '100%',
-                        borderCollapse: 'collapse',
-                        fontSize: '0.8rem',
-                        marginBottom: '2rem'
-                      }}>
-                        <thead>
-                          <tr style={{
-                            borderBottom: '2px solid #cbd5e1',
-                            color: '#64748b'
-                          }}>
-                            <th style={{
-                              textAlign: 'left',
-                              padding: '0.5rem 0'
-                            }}>SCREENING PROTOCOL PANEL</th>
-                            <th style={{
-                              textAlign: 'center',
-                              padding: '0.5rem 0'
-                            }}>RESULT</th>
-                            <th style={{
-                              textAlign: 'right',
-                              padding: '0.5rem 0'
-                            }}>VETTING STATUS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr style={{
-                            borderBottom: '1px solid #f1f5f9'
-                          }}>
-                            <td style={{
-                              padding: '0.75rem 0'
-                            }}>1. Chest X-Ray (Tuberculosis Screening)</td>
-                            <td style={{
-                              textAlign: 'center',
-                              color: '#15803d',
-                              fontWeight: 'bold'
-                            }}>CLEAR</td>
-                            <td style={{
-                              textAlign: 'right',
-                              color: '#15803d'
-                            }}>PASS &bull; Negative TB</td>
-                          </tr>
-                          <tr style={{
-                            borderBottom: '1px solid #f1f5f9'
-                          }}>
-                            <td style={{
-                              padding: '0.75rem 0'
-                            }}>2. Hepatitis B Antigen (HBsAg)</td>
-                            <td style={{
-                              textAlign: 'center',
-                              color: '#15803d',
-                              fontWeight: 'bold'
-                            }}>NON-REACTIVE</td>
-                            <td style={{
-                              textAlign: 'right',
-                              color: '#15803d'
-                            }}>PASS &bull; Immunized</td>
-                          </tr>
-                          <tr style={{
-                            borderBottom: '1px solid #f1f5f9'
-                          }}>
-                            <td style={{
-                              padding: '0.75rem 0'
-                            }}>3. Typhoid Vaccination Status (Valid to 2029)</td>
-                            <td style={{
-                              textAlign: 'center',
-                              color: '#15803d',
-                              fontWeight: 'bold'
-                            }}>ACTIVE</td>
-                            <td style={{
-                              textAlign: 'right',
-                              color: '#15803d'
-                            }}>PASS &bull; Compliant</td>
-                          </tr>
-                          <tr style={{
-                            borderBottom: '1px solid #f1f5f9'
-                          }}>
-                            <td style={{
-                              padding: '0.75rem 0'
-                            }}>4. Physical & Psychiatric Health Assessment</td>
-                            <td style={{
-                              textAlign: 'center',
-                              color: '#15803d',
-                              fontWeight: 'bold'
-                            }}>NORMAL</td>
-                            <td style={{
-                              textAlign: 'right',
-                              color: '#15803d'
-                            }}>PASS &bull; Fit for Care</td>
-                          </tr>
-                        </tbody>
-                      </table>
-
-                      {/* Medical Sign-off */}
-                      <div style={{
+                        maxWidth: '520px',
+                        aspectRatio: '1.586',
+                        background: 'linear-gradient(135deg, #a5f3fc 0%, #0ea5e9 50%, #0369a1 100%)',
+                        borderRadius: '16px',
+                        padding: '1.5rem',
+                        position: 'relative',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        color: '#0f172a',
+                        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
                         display: 'flex',
+                        flexDirection: 'column',
                         justifyContent: 'space-between',
-                        alignItems: 'flex-end',
-                        fontSize: '0.75rem'
+                        overflow: 'hidden'
                       }}>
-                        <div>
-                          <div style={{
-                            height: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: '#94a3b8'
-                          }}>
-                            [ Signed digitally: Dr. J. Tan ]
+                        {/* Background wave decorations */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '-20%',
+                          left: '-20%',
+                          width: '140%',
+                          height: '140%',
+                          background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%)',
+                          pointerEvents: 'none'
+                        }}></div>
+
+                        {/* Top Bar */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(15,23,42,0.15)', paddingBottom: '0.5rem', zIndex: 1 }}>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.1em', color: '#03396c' }}>MALAYSIA</h4>
+                            <span style={{ fontSize: '0.55rem', fontWeight: 600, color: '#03396c', letterSpacing: '0.05em' }}>KAD PENGENALAN</span>
                           </div>
-                          <div style={{
-                            borderTop: '1px solid #cbd5e1',
-                            paddingTop: '0.25rem'
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            {/* Small Malaysian flag emblem */}
+                            <div style={{ width: '24px', height: '14px', background: 'linear-gradient(to bottom, #1e3a8a 50%, #b91c1c 50%)', border: '1px solid rgba(255,255,255,0.5)', position: 'relative', overflow: 'hidden' }}>
+                              <div style={{ width: '12px', height: '7px', backgroundColor: '#1e3a8a', position: 'absolute', top: 0, left: 0 }}></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Middle Content */}
+                        <div style={{ display: 'flex', gap: '1.25rem', flex: 1, marginTop: '0.75rem', zIndex: 1 }}>
+                          {/* Left: Chip, NRIC, Name, Address */}
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {/* Chip */}
+                            <div style={{ 
+                              width: '45px', 
+                              height: '35px', 
+                              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)', 
+                              borderRadius: '6px',
+                              border: '1px solid rgba(0,0,0,0.15)',
+                              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+                              position: 'relative'
+                            }}>
+                              {/* Chip lines */}
+                              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', backgroundColor: 'rgba(0,0,0,0.2)' }}></div>
+                              <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: '1px', backgroundColor: 'rgba(0,0,0,0.2)' }}></div>
+                            </div>
+
+                            {/* NRIC */}
+                            <div>
+                              <div style={{ fontSize: '0.55rem', color: 'rgba(15,23,42,0.6)', fontWeight: 600 }}>NO. KAD PENGENALAN</div>
+                              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em', fontFamily: 'monospace' }}>
+                                {selectedMember.nric || 'N/A'}
+                              </div>
+                            </div>
+
+                            {/* Name */}
+                            <div>
+                              <div style={{ fontSize: '0.55rem', color: 'rgba(15,23,42,0.6)', fontWeight: 600 }}>NAMA</div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                                {selectedMember.name}
+                              </div>
+                            </div>
+
+                            {/* Citizen / Warganegara */}
+                            <div style={{ marginTop: 'auto' }}>
+                              <span style={{ fontSize: '0.6rem', fontWeight: 700, backgroundColor: 'rgba(3,57,108,0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(3,57,108,0.2)', color: '#03396c' }}>
+                                WARGANEGARA / CITIZEN
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right: Photo */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                            <div style={{ 
+                              width: '95px', 
+                              height: '115px', 
+                              borderRadius: '6px', 
+                              border: '2px solid rgba(255,255,255,0.8)', 
+                              boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                              overflow: 'hidden',
+                              backgroundColor: '#e2e8f0'
+                            }}>
+                              <img 
+                                src={selectedMember.photo} 
+                                alt={selectedMember.name} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'/%3E%3C/svg%3E";
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Small ghost photo at bottom right */}
+                            <div style={{ 
+                              width: '32px', 
+                              height: '38px', 
+                              borderRadius: '3px', 
+                              opacity: 0.35, 
+                              overflow: 'hidden',
+                              alignSelf: 'flex-end',
+                              marginRight: '0.25rem',
+                              filter: 'contrast(1.2) brightness(0.9) grayscale(1)'
+                            }}>
+                              <img 
+                                src={selectedMember.photo} 
+                                alt="Ghost Copy" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'/%3E%3C/svg%3E";
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Audit Stamp Overlay */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '25%',
+                          left: '15%',
+                          border: '4px solid #16a34a',
+                          color: '#16a34a',
+                          padding: '0.4rem 1rem',
+                          fontSize: '1.1rem',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase',
+                          transform: 'rotate(-10deg)',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(240, 253, 250, 0.9)',
+                          pointerEvents: 'none',
+                          zIndex: 2,
+                          boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                        }}>
+                          🛡️ IDENTITY VERIFIED
+                        </div>
+                      </div>
+                    )
+                  ) : docTab === 'cert' ? (
+                    selectedMember.proofData ? (
+                      /* User Uploaded Certificate Preview */
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: '#1f2937', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Uploaded Professional Qualification: <strong style={{ color: 'white' }}>{selectedMember.proof}</strong></span>
+                        {selectedMember.proofData.startsWith('data:image/') ? (
+                          <img src={selectedMember.proofData} alt={selectedMember.proof} style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', objectFit: 'contain' }} />
+                        ) : (
+                          <iframe src={selectedMember.proofData} title={selectedMember.proof} style={{ width: '100%', height: '420px', borderRadius: '8px', border: 'none', background: 'white' }} />
+                        )}
+                        <a href={selectedMember.proofData} download={selectedMember.proof} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+                          📥 Download Certificate
+                        </a>
+                      </div>
+                    ) : (
+                      /* Professional Certificate CSS Render */
+                      <div style={{
+                        width: '100%',
+                        maxWidth: '640px',
+                        background: 'linear-gradient(135deg, #fdfbf7 0%, #f6f1e5 100%)',
+                        border: '15px double #c5a880',
+                        boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+                        padding: '3rem 2rem',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        textAlign: 'center',
+                        color: '#3e2723',
+                        fontFamily: 'Outfit, Georgia, serif'
+                      }}>
+                        {/* Vintage Corner Accents */}
+                        <div style={{ position: 'absolute', top: '10px', left: '10px', width: '20px', height: '20px', borderTop: '2px solid #c5a880', borderLeft: '2px solid #c5a880' }}></div>
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', width: '20px', height: '20px', borderTop: '2px solid #c5a880', borderRight: '2px solid #c5a880' }}></div>
+                        <div style={{ position: 'absolute', bottom: '10px', left: '10px', width: '20px', height: '20px', borderBottom: '2px solid #c5a880', borderLeft: '2px solid #c5a880' }}></div>
+                        <div style={{ position: 'absolute', bottom: '10px', right: '10px', width: '20px', height: '20px', borderBottom: '2px solid #c5a880', borderRight: '2px solid #c5a880' }}></div>
+
+                        {/* Ribbon Logo */}
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem', color: '#c5a880' }}>🏅</div>
+
+                        <h4 style={{
+                          fontSize: '1.1rem',
+                          letterSpacing: '0.1em',
+                          color: '#5d4037',
+                          textTransform: 'uppercase',
+                          fontWeight: 600,
+                          margin: '0 0 0.5rem 0',
+                          fontFamily: 'Outfit, sans-serif'
+                        }}>
+                          Malaysia Care & Confinement Board
+                        </h4>
+                        <p style={{
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em',
+                          color: '#8d6e63',
+                          fontStyle: 'italic',
+                          margin: '0 0 2rem 0'
+                        }}>
+                          Accredited Caregiver Guild of MultiCare Support Malaysia Union
+                        </p>
+
+                        <h2 style={{
+                          fontSize: '1.8rem',
+                          color: '#3e2723',
+                          fontWeight: 'bold',
+                          margin: '0 0 1rem 0',
+                          fontFamily: 'Outfit, sans-serif'
+                        }}>
+                          Certificate of Competency
+                        </h2>
+                        
+                        <p style={{
+                          fontSize: '0.9rem',
+                          color: '#5d4037',
+                          margin: '0 0 1.5rem 0'
+                        }}>
+                          This professional qualification is awarded to
+                        </p>
+
+                        <h3 style={{
+                          fontSize: '1.6rem',
+                          fontFamily: 'Georgia, serif',
+                          textDecoration: 'underline',
+                          color: '#1e3a8a',
+                          margin: '0 0 1.5rem 0',
+                          fontWeight: 'bold'
+                        }}>
+                          {selectedMember.name}
+                        </h3>
+
+                        <p style={{
+                          fontSize: '0.85rem',
+                          lineHeight: '1.6',
+                          color: '#5d4037',
+                          maxWidth: '480px',
+                          margin: '0 auto 2rem auto'
+                        }}>
+                          having demonstrated exceptional knowledge, compliance, and clinical hours in:
+                          <br />
+                          <strong style={{
+                            color: '#1e3a8a',
+                            fontSize: '1.05rem'
                           }}>
-                            <strong>Dr. Jeffrey Tan</strong>
+                            {(selectedMember.category || '').split(',').map((catStr: string) => {
+                              const cat = catStr.trim();
+                              if (cat === 'Confinement Care') return 'Confinement Care & Neonatal Support (月嫂 / 坐月护理)';
+                              if (cat === 'Patient Companion') return 'Patient Medical Accompaniment & Clinic Protocol (就医陪诊 / 陪诊员)';
+                              if (cat === 'Elderly Caregiver') return 'Geriatric Support & Elder Care Management (养老护理)';
+                              if (cat === 'Rehabilitation Care Assistant') return 'Rehabilitation Care Assistant (康复助理)';
+                              if (cat === 'Babysitter Service') return 'Babysitter Service & Infant/Child Care (专业保姆)';
+                              return cat;
+                            }).join(' & ')}
+                          </strong>
+                          <br />
+                          and meeting all training milestones required by MCSA Union policies.
+                        </p>
+
+                        {/* Footer of Certificate */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginTop: '1.5rem',
+                          padding: '0 1rem'
+                        }}>
+                          <div style={{
+                            textAlign: 'left'
+                          }}>
+                            <div style={{
+                              fontSize: '0.8rem',
+                              fontFamily: 'Georgia, serif',
+                              fontStyle: 'italic',
+                              textDecoration: 'underline'
+                            }}>Dr. Raymond Chen</div>
                             <div style={{
                               fontSize: '0.65rem',
-                              color: '#64748b'
-                            }}>MMC Registered Practitioner #45892</div>
+                              color: '#8d6e63'
+                            }}>Guild Registry Director</div>
+                          </div>
+
+                          {/* Red Gold Seal */}
+                          <div style={{
+                            width: '75px',
+                            height: '75px',
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, #e53935 0%, #b71c1c 100%)',
+                            border: '3px dotted #c5a880',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#c5a880',
+                            fontSize: '0.55rem',
+                            fontWeight: 'bold',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                            transform: 'rotate(-5deg)'
+                          }}>
+                            <span>MCSA</span>
+                            <span>VERIFIED</span>
+                            <span style={{
+                              fontSize: '0.45rem'
+                            }}>2026</span>
+                          </div>
+
+                          <div style={{
+                            textAlign: 'right'
+                          }}>
+                            <div style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 'bold'
+                            }}>MCSA-GP-{selectedMember.id}</div>
+                            <div style={{
+                              fontSize: '0.65rem',
+                              color: '#8d6e63'
+                            }}>License Expiry: May 2027</div>
                           </div>
                         </div>
-                        
+
+                        {/* Audit Overlay Stamp */}
                         <div style={{
-                          border: '3px solid #16a34a',
-                          color: '#16a34a',
-                          padding: '0.4rem 0.8rem',
-                          fontSize: '0.9rem',
+                          position: 'absolute',
+                          top: '15%',
+                          right: '10%',
+                          border: '4px solid #2e7d32',
+                          color: '#2e7d32',
+                          padding: '0.5rem 1rem',
+                          fontSize: '1.2rem',
                           fontWeight: 'bold',
-                          borderRadius: '4px',
-                          transform: 'rotate(-5deg)',
-                          backgroundColor: 'rgba(240, 253, 250, 0.85)'
+                          textTransform: 'uppercase',
+                          transform: 'rotate(15deg)',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(232, 245, 233, 0.85)',
+                          pointerEvents: 'none'
                         }}>
-                          🩺 HEALTH VETTED
+                          ✅ CREDENTIAL MATCH
                         </div>
                       </div>
-                    </div>
+                    )
+                  ) : (
+                    selectedMember.healthCertData ? (
+                      /* User Uploaded Health Report Preview */
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: '#1f2937', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Uploaded Health Diagnostics: <strong style={{ color: 'white' }}>{selectedMember.healthCert}</strong></span>
+                        {selectedMember.healthCertData.startsWith('data:image/') ? (
+                          <img src={selectedMember.healthCertData} alt={selectedMember.healthCert} style={{ maxWidth: '100%', maxHeight: '420px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', objectFit: 'contain' }} />
+                        ) : (
+                          <iframe src={selectedMember.healthCertData} title={selectedMember.healthCert} style={{ width: '100%', height: '420px', borderRadius: '8px', border: 'none', background: 'white' }} />
+                        )}
+                        <a href={selectedMember.healthCertData} download={selectedMember.healthCert} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+                          📥 Download Health Record
+                        </a>
+                      </div>
+                    ) : (
+                      /* Health Screening Report CSS Render */
+                      <div style={{
+                        width: '100%',
+                        maxWidth: '640px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+                        padding: '2.5rem 2rem',
+                        borderRadius: '8px',
+                        color: '#1e293b',
+                        fontFamily: 'monospace, Courier, monospace'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          borderBottom: '2px solid #0284c7',
+                          paddingBottom: '1rem',
+                          marginBottom: '1.5rem'
+                        }}>
+                          <div>
+                            <h3 style={{
+                              margin: 0,
+                              color: '#0284c7',
+                              fontFamily: 'monospace',
+                              fontSize: '1.1rem',
+                              fontWeight: 'bold'
+                            }}>
+                              🏥 CLINICAL HEALTH AUDIT SHEET
+                            </h3>
+                            <p style={{
+                              margin: 0,
+                              fontSize: '0.7rem',
+                              color: '#64748b'
+                            }}>
+                              Poliklinik & Surgeri Union-Cares Group Malaysia
+                            </p>
+                          </div>
+                          <div style={{
+                            textAlign: 'right',
+                            fontSize: '0.7rem',
+                            color: '#64748b'
+                          }}>
+                            <div>Report Ref: HSR-2026-{selectedMember.id}</div>
+                            <div>Date: 12th May 2026</div>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '0.75rem',
+                          fontSize: '0.8rem',
+                          marginBottom: '1.5rem',
+                          backgroundColor: '#f8fafc',
+                          padding: '0.75rem',
+                          borderRadius: '6px'
+                        }}>
+                          <div><strong>Patient Name:</strong> {selectedMember.name}</div>
+                          <div><strong>Application Cat:</strong> {selectedMember.category}</div>
+                          <div><strong>Vetting Protocol:</strong> MCSA Guild Form 4B</div>
+                          <div><strong>Status:</strong> COMPLETED & VOUCHED</div>
+                        </div>
+
+                        <table style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          fontSize: '0.8rem',
+                          marginBottom: '2rem'
+                        }}>
+                          <thead>
+                            <tr style={{
+                              borderBottom: '2px solid #cbd5e1',
+                              color: '#64748b'
+                            }}>
+                              <th style={{
+                                textAlign: 'left',
+                                padding: '0.5rem 0'
+                              }}>SCREENING PROTOCOL PANEL</th>
+                              <th style={{
+                                textAlign: 'center',
+                                padding: '0.5rem 0'
+                              }}>RESULT</th>
+                              <th style={{
+                                textAlign: 'right',
+                                padding: '0.5rem 0'
+                              }}>VETTING STATUS</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr style={{
+                              borderBottom: '1px solid #f1f5f9'
+                            }}>
+                              <td style={{
+                                padding: '0.75rem 0'
+                              }}>1. Chest X-Ray (Tuberculosis Screening)</td>
+                              <td style={{
+                                textAlign: 'center',
+                                color: '#15803d',
+                                fontWeight: 'bold'
+                              }}>CLEAR</td>
+                              <td style={{
+                                textAlign: 'right',
+                                color: '#15803d'
+                              }}>PASS &bull; Negative TB</td>
+                            </tr>
+                            <tr style={{
+                              borderBottom: '1px solid #f1f5f9'
+                            }}>
+                              <td style={{
+                                padding: '0.75rem 0'
+                              }}>2. Hepatitis B Antigen (HBsAg)</td>
+                              <td style={{
+                                textAlign: 'center',
+                                color: '#15803d',
+                                fontWeight: 'bold'
+                              }}>NON-REACTIVE</td>
+                              <td style={{
+                                textAlign: 'right',
+                                color: '#15803d'
+                              }}>PASS &bull; Immunized</td>
+                            </tr>
+                            <tr style={{
+                              borderBottom: '1px solid #f1f5f9'
+                            }}>
+                              <td style={{
+                                padding: '0.75rem 0'
+                              }}>3. Typhoid Vaccination Status (Valid to 2029)</td>
+                              <td style={{
+                                textAlign: 'center',
+                                color: '#15803d',
+                                fontWeight: 'bold'
+                              }}>ACTIVE</td>
+                              <td style={{
+                                textAlign: 'right',
+                                color: '#15803d'
+                              }}>PASS &bull; Compliant</td>
+                            </tr>
+                            <tr style={{
+                              borderBottom: '1px solid #f1f5f9'
+                            }}>
+                              <td style={{
+                                padding: '0.75rem 0'
+                              }}>4. Physical & Psychiatric Health Assessment</td>
+                              <td style={{
+                                textAlign: 'center',
+                                color: '#15803d',
+                                fontWeight: 'bold'
+                              }}>NORMAL</td>
+                              <td style={{
+                                textAlign: 'right',
+                                color: '#15803d'
+                              }}>PASS &bull; Fit for Care</td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        {/* Medical Sign-off */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-end',
+                          fontSize: '0.75rem'
+                        }}>
+                          <div>
+                            <div style={{
+                              height: '40px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              color: '#94a3b8'
+                            }}>
+                              [ Signed digitally: Dr. J. Tan ]
+                            </div>
+                            <div style={{
+                              borderTop: '1px solid #cbd5e1',
+                              paddingTop: '0.25rem'
+                            }}>
+                              <strong>Dr. Jeffrey Tan</strong>
+                              <div style={{
+                                fontSize: '0.65rem',
+                                color: '#64748b'
+                              }}>MMC Registered Practitioner #45892</div>
+                            </div>
+                          </div>
+                          
+                          <div style={{
+                            border: '3px solid #16a34a',
+                            color: '#16a34a',
+                            padding: '0.4rem 0.8rem',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                            borderRadius: '4px',
+                            transform: 'rotate(-5deg)',
+                            backgroundColor: 'rgba(240, 253, 250, 0.85)'
+                          }}>
+                            🩺 HEALTH VETTED
+                          </div>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
               </div>
@@ -1636,10 +3329,15 @@ export default function AdminPage() {
                 <strong style={{
                   color: 'var(--accent)'
                 }}>
-                  {selectedMember.category === 'Confinement Care' && 'Confinement Care Specialist (月嫂)'}
-                  {selectedMember.category === 'Patient Companion' && 'Patient Companion (陪诊员)'}
-                  {selectedMember.category === 'Elderly Caregiver' && 'Elderly Caregiver (养老护理员)'}
-                  {selectedMember.category === 'Rehabilitation Care Assistant' && 'Rehabilitation Care Assistant (康复助理)'}
+                  {(selectedMember.category || '').split(',').map((catStr: string) => {
+                    const cat = catStr.trim();
+                    if (cat === 'Confinement Care') return 'Confinement Care Specialist (月嫂 / 坐月)';
+                    if (cat === 'Patient Companion') return 'Patient Companion (陪诊员 / 陪诊)';
+                    if (cat === 'Elderly Caregiver') return 'Elderly Caregiver (养老护理员)';
+                    if (cat === 'Rehabilitation Care Assistant') return 'Rehabilitation Care Assistant (康复助理)';
+                    if (cat === 'Babysitter Service') return 'Babysitter Service Specialist (专业保姆)';
+                    return cat;
+                  }).join(', ')}
                 </strong>
               </div>
               
@@ -1686,6 +3384,362 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {selectedUnionCard && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(11, 19, 41, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '2rem'
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            borderRadius: '20px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+            alignItems: 'center'
+          }}>
+            <h3 style={{ margin: 0, color: 'white', fontSize: '1.2rem', fontWeight: 800 }}>
+              MCSA Digital Membership Card / 会员卡预览
+            </h3>
+
+            {/* Card Render */}
+            <div style={{
+              width: '100%',
+              height: '276px',
+              background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
+              color: 'white',
+              padding: '2rem',
+              borderRadius: '24px',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              position: 'relative',
+              overflow: 'hidden',
+              border: '1px solid rgba(255, 255, 255, 0.08)'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '-50%',
+                left: '-50%',
+                width: '200%',
+                height: '200%',
+                background: 'linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.08) 50%, transparent 55%)',
+                pointerEvents: 'none'
+              }}></div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h3 style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+                    MULTICARE SUPPORT UNION
+                  </h3>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                    MCSA MALAYSIA VALIDATED REGISTRY
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  {(selectedUnionCard?.category || '').includes('Patient Companion') && (
+                    <img 
+                      src="/aplus-assist-logo.jpg" 
+                      alt="A+ Assist Logo" 
+                      style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: '#0d162d', objectFit: 'contain', padding: '1px' }} 
+                    />
+                  )}
+                  <img 
+                    src="/mcsa-logo.png" 
+                    alt="MCSA Logo" 
+                    style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'white', padding: '1px' }} 
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', margin: '0.5rem 0' }}>
+                <div style={{
+                  width: '70px',
+                  height: '85px',
+                  backgroundColor: '#1e293b',
+                  border: '2px solid var(--accent)',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  position: 'relative',
+                  flexShrink: 0
+                }}>
+                  <img 
+                    src={selectedUnionCard.photo} 
+                    alt={selectedUnionCard.name} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'rgba(245, 158, 11, 0.9)',
+                    color: '#000000',
+                    fontSize: '0.45rem',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    padding: '1px 0'
+                  }}>
+                    PHOTO ID
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                      Membership ID
+                    </span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.05em' }}>
+                      {selectedUnionCard.member_number}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Specialty Roles</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', whiteSpace: 'normal', display: 'block' }}>
+                      {selectedUnionCard.category}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Holder Name</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>{selectedUnionCard.name}</span>
+                </div>
+                
+                <div style={{
+                  border: '2px solid var(--health)',
+                  color: 'var(--health)',
+                  padding: '0.2rem 0.5rem',
+                  borderRadius: '4px',
+                  fontSize: '0.7rem',
+                  fontWeight: 'bold',
+                  transform: 'rotate(-5deg)',
+                  textTransform: 'uppercase',
+                  backgroundColor: '#0b1329',
+                  marginRight: 'auto',
+                  marginLeft: '1rem'
+                }}>
+                  ✓ ACTIVE
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Expiration</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{selectedUnionCard.expiry}</span>
+                </div>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setSelectedUnionCard(null)} 
+              className="btn btn-primary"
+              style={{ width: '100%', height: '42px' }}
+            >
+              Close / 关闭
+            </button>
+          </div>
+        </div>
+      )}
+
+      {selectedMockIC && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(11, 19, 41, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '2rem'
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            borderRadius: '20px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '560px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+            alignItems: 'center'
+          }}>
+            <h3 style={{ margin: 0, color: 'white', fontSize: '1.2rem', fontWeight: 800 }}>
+              Malaysian MyKad ID Preview / 身份证预览
+            </h3>
+
+            {/* Card Render */}
+            <div style={{
+              width: '100%',
+              maxWidth: '520px',
+              aspectRatio: '1.586',
+              background: 'linear-gradient(135deg, #a5f3fc 0%, #0ea5e9 50%, #0369a1 100%)',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              position: 'relative',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: '#0f172a',
+              fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '-20%',
+                left: '-20%',
+                width: '140%',
+                height: '140%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%)',
+                pointerEvents: 'none'
+              }}></div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(15,23,42,0.15)', paddingBottom: '0.5rem', zIndex: 1 }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.1em', color: '#03396c' }}>MALAYSIA</h4>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 600, color: '#03396c', letterSpacing: '0.05em' }}>KAD PENGENALAN</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <div style={{ width: '24px', height: '14px', background: 'linear-gradient(to bottom, #1e3a8a 50%, #b91c1c 50%)', border: '1px solid rgba(255,255,255,0.5)', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ width: '12px', height: '7px', backgroundColor: '#1e3a8a', position: 'absolute', top: 0, left: 0 }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1.25rem', flex: 1, marginTop: '0.75rem', zIndex: 1 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ 
+                    width: '45px', 
+                    height: '35px', 
+                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)', 
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0,0,0,0.15)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3)',
+                    position: 'relative'
+                  }}>
+                    <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', backgroundColor: 'rgba(0,0,0,0.2)' }}></div>
+                    <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: '1px', backgroundColor: 'rgba(0,0,0,0.2)' }}></div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(15,23,42,0.6)', fontWeight: 600 }}>NO. KAD PENGENALAN</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em', fontFamily: 'monospace' }}>
+                      {selectedMockIC.nric || 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.55rem', color: 'rgba(15,23,42,0.6)', fontWeight: 600 }}>NAMA</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                      {selectedMockIC.name}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 'auto' }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 700, backgroundColor: 'rgba(3,57,108,0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(3,57,108,0.2)', color: '#03396c' }}>
+                      WARGANEGARA / CITIZEN
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <div style={{ 
+                    width: '95px', 
+                    height: '115px', 
+                    borderRadius: '6px', 
+                    border: '2px solid rgba(255,255,255,0.8)', 
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                    overflow: 'hidden',
+                    backgroundColor: '#e2e8f0'
+                  }}>
+                    <img 
+                      src={selectedMockIC.photo} 
+                      alt={selectedMockIC.name} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  
+                  <div style={{ 
+                    width: '32px', 
+                    height: '38px', 
+                    borderRadius: '3px', 
+                    opacity: 0.35, 
+                    overflow: 'hidden',
+                    alignSelf: 'flex-end',
+                    marginRight: '0.25rem',
+                    filter: 'contrast(1.2) brightness(0.9) grayscale(1)'
+                  }}>
+                    <img 
+                      src={selectedMockIC.photo} 
+                      alt="Ghost Copy" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
+                position: 'absolute',
+                top: '25%',
+                left: '15%',
+                border: '4px solid #16a34a',
+                color: '#16a34a',
+                padding: '0.4rem 1rem',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                transform: 'rotate(-10deg)',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(240, 253, 250, 0.9)',
+                pointerEvents: 'none',
+                zIndex: 2,
+                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+              }}>
+                🛡️ IDENTITY VERIFIED
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setSelectedMockIC(null)} 
+              className="btn btn-primary"
+              style={{ width: '100%', height: '42px' }}
+            >
+              Close / 关闭
+            </button>
           </div>
         </div>
       )}

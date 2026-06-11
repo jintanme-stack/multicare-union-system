@@ -85,10 +85,11 @@ export default function FindCaregiversPage() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
                   <option value="All">All Specialties / 所有类别</option>
-                  <option value="Confinement Care">🍼 Confinement Care / 月嫂</option>
-                  <option value="Patient Companion">🏥 Patient Companion / 陪诊员</option>
+                  <option value="Confinement Care">🍼 Confinement Care / 月嫂 / 坐月护理</option>
+                  <option value="Patient Companion">🏥 Patient Companion / 陪诊员 / 就医陪诊</option>
                   <option value="Elderly Caregiver">👴 Elderly Caregiver / 养老护理员</option>
                   <option value="Rehabilitation Care Assistant">💪 Rehab Therapist / 康复助理</option>
+                  <option value="Babysitter Service">👶 Babysitter Service / 专业保姆</option>
                 </select>
               </div>
             </div>

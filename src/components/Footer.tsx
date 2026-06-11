@@ -12,8 +12,32 @@ export default function Footer() {
   const [submitted, setSubmitted] = useState(false);
   const [lang, setLang] = useState<Language>('en');
 
+  const [footerInfo, setFooterInfo] = useState({
+    address: 'KL Sentral Business Suites, Kuala Lumpur',
+    phone: '+60 3-2274 9988',
+    email: 'registry@mcsa.com.my',
+    desc: ''
+  });
+
   useEffect(() => {
     setLang(store.getLanguage() as Language);
+    const info = store.getFooterInfo();
+    if (info) {
+      setFooterInfo(info);
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'mcsa_footer_info') {
+        const updatedInfo = store.getFooterInfo();
+        if (updatedInfo) {
+          setFooterInfo(updatedInfo);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const t = translations[lang] || translations.en;
@@ -63,22 +87,26 @@ export default function Footer() {
               alt="MCSA Logo" 
               style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'white', padding: '2px' }} 
             />
-            <div>
-              <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: 0, fontFamily: 'Outfit' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: 0, fontFamily: 'Outfit', lineHeight: '1.1' }}>
                 MCSA MALAYSIA
               </h4>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>
-                马来西亚多元关怀支持公会
-              </span>
+              <span style={{
+                fontSize: '0.62rem',
+                fontWeight: 500,
+                color: 'var(--text-muted)',
+                marginTop: '2px',
+                letterSpacing: '0.05em'
+              }}>马来西亚支持关怀总会</span>
             </div>
           </div>
           <p style={{ lineHeight: 1.6, marginBottom: '1.5rem' }}>
-            {t.footer.desc}
+            {footerInfo.desc || t.footer.desc}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={16} /> KL Sentral Business Suites, Kuala Lumpur</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Phone size={16} /> +60 3-2274 9988</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={16} /> registry@mcsa.com.my</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={16} /> {footerInfo.address}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Phone size={16} /> {footerInfo.phone}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={16} /> {footerInfo.email}</span>
           </div>
         </div>
 

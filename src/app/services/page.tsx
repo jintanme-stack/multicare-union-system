@@ -36,6 +36,11 @@ export default function ServicesPage() {
       title: lang === 'zh' ? '💪 肢体康复辅助照护' : lang === 'bm' ? '💪 Pembantu Pemulihan & Rehab' : '💪 Rehabilitation Care Assistant',
       desc: lang === 'zh' ? '陪伴术后或中风偏瘫患者进行肢体运动康复、日常复健计划执行，提供动作练习与保护。' : lang === 'bm' ? 'Menemani pesakit strok selepas pembedahan melalui terapi mobiliti, jadual pemulihan fizikal, dan latihan kemahiran motor.' : 'Accompanying post-op stroke patients through mobility therapy, physical rehab schedules, and motor skills practice.',
       skills: lang === 'zh' ? ['关节功能活动', '偏瘫恢复训练', '专业物理复健', '肢体协调辅助'] : lang === 'bm' ? ['Latihan Fungsi Motor', 'Pemulihan Strok', 'Pendamping Fisioterapi', 'Bantuan Koordinasi'] : ['Motor Function Exercises', 'Stroke Recovery Milestones', 'Physiotherapy Companionship', 'Coordination Assist']
+    },
+    {
+      title: lang === 'zh' ? '👶 专业保姆与幼儿照护' : lang === 'bm' ? '👶 Pengasuh Warga Kanak-kanak (Babysitter)' : '👶 Babysitter Care Service',
+      desc: lang === 'zh' ? '提供专业的婴幼儿日常起居照顾、安全活动陪护、益智游戏互动、健康饮食喂养与良好成长习惯培养。' : lang === 'bm' ? 'Penyediaan penjagaan bayi dan kanak-kanak profesional, pengawasan keselamatan aktiviti harian, interaksi permainan pendidikan, dan penyediaan makanan seimbang.' : 'Professional infant and toddler daily care, active safety supervision, educational play interaction, healthy feeding, and growth routine building.',
+      skills: lang === 'zh' ? ['婴幼儿安全看护', '益智游戏互动', '日常喂养护理', '良好习惯养成'] : lang === 'bm' ? ['Penyeliaan Keselamatan', 'Permainan Pendidikan', 'Penyediaan Susu & Makanan', 'Pembangunan Rutin'] : ['Infant Safety Supervision', 'Educational Play & Games', 'Feeding & Sterilization', 'Habit & Routine Building']
     }
   ];
 
@@ -83,7 +88,7 @@ export default function ServicesPage() {
                 borderRadius: '10px'
               }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
-                  {lang === 'zh' ? '工会核心执业胜任标准' : lang === 'bm' ? 'Kecekapan Standard Teras' : 'Core Standard Competencies'}
+                  {lang === 'zh' ? '公会核心执业胜任标准' : lang === 'bm' ? 'Kecekapan Standard Teras' : 'Core Standard Competencies'}
                 </span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   {service.skills.map((skill, sIdx) => (

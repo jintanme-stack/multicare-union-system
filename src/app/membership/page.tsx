@@ -20,22 +20,22 @@ export default function MembershipPage() {
     {
       icon: <ShieldCheck size={24} style={{ color: 'var(--accent)' }} />,
       title: lang === 'zh' ? '官方执业资格与在线核验档案' : lang === 'bm' ? 'Lesen Rasmi & Profil Pengesahan' : 'Official Licensure & Verification Profile',
-      desc: lang === 'zh' ? '每位会员都拥有可供公开查询的个人执业验证页面。医院和客户可通过工会平台秒级查验你的执业状态。' : lang === 'bm' ? 'Setiap ahli menerima profil lesen awam yang boleh dicari. Hospital dan pelanggan mengesahkan status aktif anda melalui portal sah kami.' : 'Every member receives a searchable public license profile. Hospitals and clients verify your active standing via our verify portal.'
+      desc: lang === 'zh' ? '每位会员都拥有可供公开查询的个人执业验证页面。医院和客户可通过公会平台秒级查验你的执业状态。' : lang === 'bm' ? 'Setiap ahli menerima profil lesen awam yang boleh dicari. Hospital dan pelanggan mengesahkan status aktif anda melalui portal sah kami.' : 'Every member receives a searchable public license profile. Hospitals and clients verify your active standing via our verify portal.'
     },
     {
       icon: <Sparkles size={24} style={{ color: 'var(--primary)' }} />,
-      title: lang === 'zh' ? '全息渐变数字工会卡' : lang === 'bm' ? 'Kad Digital Kesatuan Holografik' : 'Holographic Digital Union Card',
+      title: lang === 'zh' ? '全息渐变数字公会卡' : lang === 'bm' ? 'Kad Digital Kesatuan Holografik' : 'Holographic Digital Union Card',
       desc: lang === 'zh' ? '内置加密智能芯片效果，方便在各大合作医院与门诊出示以享受优先排队和就医便利。' : lang === 'bm' ? 'Dapatkan keutamaan daftar masuk di klinik dan hospital utama dengan kad ID digital selamat termasuk cip pintar.' : 'Unlock check-in prioritization at major clinics and hospitals with a secure digital ID card including a verified smart chip.'
     },
     {
       icon: <FileText size={24} style={{ color: 'var(--health)' }} />,
       title: lang === 'zh' ? '合作医院 SOP 与楼层急救导引库' : lang === 'bm' ? 'Perpustakaan SOP & Peta Laluan Hospital' : 'Private Hospital SOP & Floor Guide Library',
-      desc: lang === 'zh' ? '直接获取由工会管理员发布和更新的各大私立医院楼层图纸、就医绿道指引及处方拿药流程。' : lang === 'bm' ? 'Akses segera kepada peta, susun atur koordinat kecemasan, dan garis panduan pesakit luar yang diterbitkan terus oleh admin kesatuan.' : 'Get immediate access to maps, emergency coordinate layouts, and outpatient guidelines published directly by union admins.'
+      desc: lang === 'zh' ? '直接获取由公会管理员发布和更新的各大私立医院楼层图纸、就医绿道指引及处方拿药流程。' : lang === 'bm' ? 'Akses segera kepada peta, susun atur koordinat kecemasan, dan garis panduan pesakit luar yang diterbitkan terus oleh admin kesatuan.' : 'Get immediate access to maps, emergency coordinate layouts, and outpatient guidelines published directly by union admins.'
     },
     {
       icon: <Award size={24} style={{ color: 'var(--primary)' }} />,
       title: lang === 'zh' ? '持续、稳定的患者护理派单流' : lang === 'bm' ? 'Aliran Tugasan Penjagaan Berterusan' : 'Continuous Case Dispatch Streams',
-      desc: lang === 'zh' ? '直接进入工会内部派单池，能够实时查看附近家庭发布的陪诊与月嫂需求，自由沟通接单。' : lang === 'bm' ? 'Akses terus tugasan pelanggan. Anda boleh melihat tawaran penjagaan tempatan dan menghubungi pelanggan secara langsung.' : 'Access client dispatches directly. You can view local caregiver posts and contact clients directly to confirm dispatches.'
+      desc: lang === 'zh' ? '直接进入公会内部派单池，能够实时查看附近家庭发布的陪诊与月嫂需求，自由沟通接单。' : lang === 'bm' ? 'Akses terus tugasan pelanggan. Anda boleh melihat tawaran penjagaan tempatan dan menghubungi pelanggan secara langsung.' : 'Access client dispatches directly. You can view local caregiver posts and contact clients directly to confirm dispatches.'
     }
   ];
 
@@ -63,7 +63,7 @@ export default function MembershipPage() {
           {/* Left: Benefits */}
           <div>
             <h2 style={{ fontSize: '1.6rem', marginBottom: '1.5rem', color: '#ffffff' }}>
-              {lang === 'zh' ? '为什么要加入 MCSA 马来西亚工会？' : lang === 'bm' ? 'Kenapa Sertai Kesatuan MCSA Malaysia?' : 'Why Join MultiCare Support Malaysia Union?'}
+              {lang === 'zh' ? '为什么要加入 MCSA 马来西亚公会？' : lang === 'bm' ? 'Kenapa Sertai Kesatuan MCSA Malaysia?' : 'Why Join MultiCare Support Malaysia Union?'}
             </h2>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

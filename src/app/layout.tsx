@@ -1,5 +1,6 @@
 import './globals.css';
 import React from 'react';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata = {
   title: 'MultiCare Support Malaysia Union',
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </body>
     </html>
   );

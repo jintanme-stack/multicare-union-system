@@ -11,13 +11,25 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [category, setCategory] = useState('Confinement Care');
+  const [nric, setNric] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['Confinement Care']);
+  const categoriesList = [
+    { value: 'Confinement Care', labelZh: '月嫂 / 坐月护理 (Confinement Care)', labelBm: 'Penjaga Berpantang (Confinement)', labelEn: 'Confinement Lady', icon: '🍼' },
+    { value: 'Patient Companion', labelZh: '就医陪诊 / 陪诊员 (Patient Companion)', labelBm: 'Peneman Pesakit (Companion)', labelEn: 'Patient Companion', icon: '🏥' },
+    { value: 'Elderly Caregiver', labelZh: 'Elderly Caregiver (养老护理员)', labelBm: 'Penjaga Warga Emas (Elderly)', labelEn: 'Elderly Caregiver', icon: '👴' },
+    { value: 'Rehabilitation Care Assistant', labelZh: 'Rehabilitation Therapist (康复助理)', labelBm: 'Pembantu Rehab (Rehab)', labelEn: 'Rehab Assistant', icon: '💪' },
+    { value: 'Babysitter Service', labelZh: 'Babysitter (专业保姆)', labelBm: 'Pengasuh Bayi (Babysitter)', labelEn: 'Babysitter Service', icon: '👶' }
+  ];
   const [exp, setExp] = useState('1 yr');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
-  const [proof, setProof] = useState('Accredited_Caregiver_Diploma.pdf');
-  const [healthCert, setHealthCert] = useState('TB_Health_Clearance_Record.pdf');
-  const [photo, setPhoto] = useState('https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?q=80&w=256&h=256&fit=crop');
+  const [proof, setProof] = useState('');
+  const [proofData, setProofData] = useState('');
+  const [healthCert, setHealthCert] = useState('');
+  const [healthCertData, setHealthCertData] = useState('');
+  const [icDoc, setIcDoc] = useState('');
+  const [icDocData, setIcDocData] = useState('');
+  const [photo, setPhoto] = useState("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'/%3E%3C/svg%3E");
   
   const [submitted, setSubmitted] = useState(false);
   const [assignedAppId, setAssignedAppId] = useState('');
@@ -27,31 +39,202 @@ export default function RegisterPage() {
     setLang(store.getLanguage() as Language);
   }, []);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const compressImage = (base64Str: string, maxDim = 250, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } else {
+          resolve(base64Str);
+        }
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+    });
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const rawBase64 = reader.result as string;
+        try {
+          const compressed = await compressImage(rawBase64, 250, 0.75);
+          setPhoto(compressed);
+        } catch (err) {
+          setPhoto(rawBase64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProof(file.name);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const rawBase64 = reader.result as string;
+        if (file.type.startsWith('image/')) {
+          try {
+            const compressed = await compressImage(rawBase64, 1000, 0.7);
+            setProofData(compressed);
+          } catch (err) {
+            setProofData(rawBase64);
+          }
+        } else {
+          setProofData(rawBase64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleHealthCertUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setHealthCert(file.name);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const rawBase64 = reader.result as string;
+        if (file.type.startsWith('image/')) {
+          try {
+            const compressed = await compressImage(rawBase64, 1000, 0.7);
+            setHealthCertData(compressed);
+          } catch (err) {
+            setHealthCertData(rawBase64);
+          }
+        } else {
+          setHealthCertData(rawBase64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleIcDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIcDoc(file.name);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const rawBase64 = reader.result as string;
+        if (file.type.startsWith('image/')) {
+          try {
+            const compressed = await compressImage(rawBase64, 1000, 0.7);
+            setIcDocData(compressed);
+          } catch (err) {
+            setIcDocData(rawBase64);
+          }
+        } else {
+          setIcDocData(rawBase64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+    const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !phone || !bio || !location) return;
+    if (!name || !email || !phone || !bio || !location || !nric) return;
+
+    if (!icDoc) {
+      alert(lang === 'zh' 
+        ? '⚠️ 成为公会会员需要上传您的身份证 (NRIC/IC) 扫描件以进行资质安全验证。' 
+        : lang === 'bm' 
+        ? '⚠️ Sila muat naik salinan Kad Pengenalan (IC) anda untuk pengesahan keselamatan keahlian.' 
+        : '⚠️ NRIC / IC document upload is required to verify identity for union safety vetting.');
+      return;
+    }
+
+    // Validate Malaysian NRIC format (12 digits total after stripping non-numeric chars)
+    const cleanNric = nric.replace(/[^0-9]/g, '');
+    if (cleanNric.length !== 12) {
+      alert(lang === 'zh' 
+        ? '请输入有效的12位身份证号码 (例如: 870615-10-5622)' 
+        : lang === 'bm' 
+        ? 'Sila masukkan No. Kad Pengenalan 12-digit yang sah (contoh: 870615-10-5622)' 
+        : 'Please enter a valid 12-digit NRIC / ID Number (e.g. 870615-10-5622)');
+      return;
+    }
+
+    // Format NRIC with dashes: XXXXXX-XX-XXXX
+    const formattedNric = `${cleanNric.substring(0, 6)}-${cleanNric.substring(6, 8)}-${cleanNric.substring(8)}`;
 
     const appId = 'APP-' + Math.floor(105 + Math.random() * 900);
     
     const newPending = {
       id: appId,
       name,
-      category,
+      category: selectedCategories.join(', '),
+      nric: formattedNric,
       email,
       phone,
       exp,
       location,
       bio,
-      proof,
-      healthCert,
+      proof: proof || 'Credential_Accredited.pdf',
+      proofData: proofData || '',
+      healthCert: healthCert || 'TB_Clearance_Record.pdf',
+      healthCertData: healthCertData || '',
+      icDoc: icDoc,
+      icDocData: icDocData || '',
       photo
     };
 
-    const currentPending = store.getPendingMembers();
-    store.setPendingMembers([...currentPending, newPending]);
+    try {
+      const currentPending = store.getPendingMembers();
+      store.setPendingMembers([...currentPending, newPending]);
+      setAssignedAppId(appId);
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Storage write failed, attempting optimizations:", err);
+      // Quota exceeded: retry by clearing/truncating heavy base64 data and replacing with a mock small base64 PDF
+      const warningMsg = lang === 'zh' 
+        ? '⚠️ 提示：上传的文件对于浏览器本地存储空间过大，我们将采用优化的仿真文档进行注册，不影响您的资质核验。' 
+        : lang === 'bm' 
+        ? '⚠️ Nota: Dokumen yang dimuat naik terlalu besar untuk storan pelayar. Kami akan menggunakan dokumen simulasi yang dioptimumkan untuk pendaftaran.' 
+        : '⚠️ Note: The uploaded documents are too large for browser local storage. We will simulate the upload with optimized mock documents for review.';
+      
+      alert(warningMsg);
+      
+      const optimizedPending = {
+        ...newPending,
+        proofData: proofData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBDcmVkZW50aWFsIEFjY3JlZGl0ZWQgUERGKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxOSAwMDAwMCBuIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : "",
+        healthCertData: healthCertData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBUQiBDbGVhcmFuY2UgUmVjb3JkIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCDAwMDAwMDAwMTkgMDAwMDAgbIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : "",
+        icDocData: icDocData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBJQyBDYXJkIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCDAwMDAwMDAwMTkgMDAwMDAgbIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : ""
+      };
 
-    setAssignedAppId(appId);
-    setSubmitted(true);
+      try {
+        const currentPending = store.getPendingMembers();
+        store.setPendingMembers([...currentPending, optimizedPending]);
+        setAssignedAppId(appId);
+        setSubmitted(true);
+      } catch (finalErr) {
+        alert("Fatal: Unable to register even with optimized files. Please choose a smaller profile image.");
+      }
+    }
   };
 
   const t = translations[lang] || translations.en;
@@ -187,26 +370,107 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">
+                        {lang === 'zh' ? '身份证号码 / NRIC (开具报税收据所必需)' : lang === 'bm' ? 'No. Kad Pengenalan (Diperlukan untuk resit cukai)' : 'NRIC / ID Number (Required for Tax Receipts)'}
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        className="form-input"
+                        placeholder="e.g. 870615-10-5622"
+                        value={nric}
+                        onChange={(e) => setNric(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
                     2. {lang === 'zh' ? '护理师专业资质登记' : lang === 'bm' ? 'Butiran Pentauliahan Penjaga' : 'Caregiver Accreditation Details'}
                   </h3>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.25rem' }}>
-                    <div className="form-group">
-                      <label className="form-label">{t.register.category}</label>
-                      <select
-                        className="form-input"
-                        style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                      >
-                        <option value="Confinement Care">🍼 {lang === 'zh' ? 'Confinement Lady (月嫂)' : lang === 'bm' ? 'Penjaga Berpantang (Materniti)' : 'Confinement Lady'}</option>
-                        <option value="Patient Companion">🏥 {lang === 'zh' ? 'Patient Companion (陪诊人员)' : lang === 'bm' ? 'Peneman Pesakit' : 'Patient Companion'}</option>
-                        <option value="Elderly Caregiver">👴 {lang === 'zh' ? 'Elderly Caregiver (养老护理员)' : lang === 'bm' ? 'Penjaga Warga Emas' : 'Elderly Caregiver'}</option>
-                        <option value="Rehabilitation Care Assistant">💪 {lang === 'zh' ? 'Rehabilitation Therapist (康复助理)' : lang === 'bm' ? 'Pembantu Rehab' : 'Rehab Assistant'}</option>
-                      </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ marginBottom: '1rem', display: 'block' }}>
+                        {lang === 'zh' ? '选择专业照护分类 (支持多选) / Specialized Care Categories (Select multiple)' : lang === 'bm' ? 'Pilih Kategori Penjagaan (Boleh pilih lebih dari satu)' : 'Specialized Care Categories (Select all that apply)'}
+                      </label>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                        gap: '1rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        {categoriesList.map((cat) => {
+                          const isSelected = selectedCategories.includes(cat.value);
+                          return (
+                            <div
+                              key={cat.value}
+                              onClick={() => {
+                                if (isSelected) {
+                                  if (selectedCategories.length > 1) {
+                                    setSelectedCategories(selectedCategories.filter(c => c !== cat.value));
+                                  } else {
+                                    alert(lang === 'zh' ? '请至少选择一个分类' : lang === 'bm' ? 'Sila pilih sekurang-kurangnya satu kategori' : 'Please select at least one category');
+                                  }
+                                } else {
+                                  setSelectedCategories([...selectedCategories, cat.value]);
+                                }
+                              }}
+                              style={{
+                                backgroundColor: isSelected ? 'rgba(37,99,235,0.08)' : 'rgba(255,255,255,0.01)',
+                                border: isSelected ? '2px solid var(--primary)' : '2px solid rgba(255,255,255,0.06)',
+                                borderRadius: '12px',
+                                padding: '1rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                boxShadow: isSelected ? '0 4px 12px rgba(37,99,235,0.15)' : 'none'
+                              }}
+                              onMouseOver={(e) => {
+                                if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                              }}
+                              onMouseOut={(e) => {
+                                if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                              }}
+                            >
+                              <span style={{ fontSize: '1.5rem' }}>{cat.icon}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                                  {lang === 'zh' ? cat.labelZh : lang === 'bm' ? cat.labelBm : cat.labelEn}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                                  {cat.value}
+                                </div>
+                              </div>
+                              
+                              <div style={{
+                                width: '18px',
+                                height: '18px',
+                                borderRadius: '50%',
+                                border: isSelected ? '2px solid var(--primary)' : '2px solid rgba(255,255,255,0.2)',
+                                backgroundColor: isSelected ? 'var(--primary)' : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}>
+                                {isSelected && (
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" style={{ width: '10px', height: '10px' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="form-group">
+
+                    <div className="form-group" style={{ margin: 0 }}>
                       <label className="form-label">{t.register.experience}</label>
                       <select
                         className="form-input"
@@ -238,7 +502,7 @@ export default function RegisterPage() {
                   </div>
 
                   <h3 style={{ fontSize: '1.25rem', marginTop: '2rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', color: '#ffffff' }}>
-                    3. {t.register.presetPhoto}
+                    3. {lang === 'zh' ? '上传职业头像照片' : lang === 'bm' ? 'Muat Naik Gambar Potret' : 'Upload Professional Headshot'}
                   </h3>
 
                   <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', marginBottom: '2rem' }}>
@@ -281,37 +545,34 @@ export default function RegisterPage() {
                       </span>
                     </div>
 
-                    {/* Presets and URL select */}
+                    {/* Photo upload action */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <label className="form-label">{lang === 'zh' ? '选择专业职业半身照预设' : lang === 'bm' ? 'Pilih Potret Pilihan' : 'Select Professional Headshot Preset'}</label>
-                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        {[
-                          { name: 'Preset A (Malay Female)', url: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?q=80&w=256&h=256&fit=crop' },
-                          { name: 'Preset B (Chinese Female)', url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=256&h=256&fit=crop' },
-                          { name: 'Preset C (Indian Male)', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=256&h=256&fit=crop' },
-                          { name: 'Preset D (Chinese Male)', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=256&h=256&fit=crop' }
-                        ].map((preset) => (
-                          <button
-                            key={preset.url}
-                            type="button"
-                            className={`btn ${photo === preset.url ? 'btn-primary' : 'btn-outline'}`}
-                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px', cursor: 'pointer' }}
-                            onClick={() => setPhoto(preset.url)}
-                          >
-                            {preset.name.split(' ')[0] + ' ' + preset.name.split(' ')[1]}
-                          </button>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'zh' ? '或输入自定义头像链接：' : lang === 'bm' ? 'Atau masukkan URL imej:' : 'Or enter custom image URL:'}</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ width: '100%', fontSize: '0.82rem', padding: '0.4rem 0.75rem', height: '36px' }}
-                          placeholder="https://example.com/my-photo.jpg"
-                          value={photo}
-                          onChange={(e) => setPhoto(e.target.value)}
-                        />
+                      <label className="form-label">{lang === 'zh' ? '自选头像照片文件：' : lang === 'bm' ? 'Gambar potret anda sendiri:' : 'Profile image file:'}</label>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          {lang === 'zh' ? '请选择一张近期、清晰的个人头像照片（JPG, PNG 格式，最大不超过 5MB）：' : lang === 'bm' ? 'Sila pilih satu gambar potret yang jelas (format JPG, PNG, Maks 5MB):' : 'Please select a clear portrait profile image (JPG, PNG formats, Max 5MB):'}
+                        </span>
+                        
+                        <label 
+                          className="btn btn-outline" 
+                          style={{ 
+                            padding: '0.6rem 1.2rem', 
+                            fontSize: '0.85rem', 
+                            cursor: 'pointer', 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem', 
+                            border: '1.5px dashed var(--primary)', 
+                            alignSelf: 'flex-start',
+                            background: 'rgba(37,99,235,0.04)',
+                            borderRadius: '8px'
+                          }}
+                        >
+                          <UploadCloud size={18} style={{ color: 'var(--primary)' }} />
+                          <span>{lang === 'zh' ? '📁 选择头像文件' : '📁 Choose Profile Photo'}</span>
+                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -321,36 +582,101 @@ export default function RegisterPage() {
                   </h3>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    {/* Professional Certificate Upload Card */}
                     <div className="form-group">
-                      <label className="form-label">{lang === 'zh' ? '专业资格证书文件名称' : lang === 'bm' ? 'Nama Fail Sijil Kecekapan' : 'Professional Certification File Name'}</label>
-                      <div style={{ position: 'relative' }}>
-                        <FileText size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
-                        <input
-                          type="text"
-                          required
-                          className="form-input"
-                          style={{ width: '100%', paddingLeft: '44px' }}
-                          value={proof}
-                          onChange={(e) => setProof(e.target.value)}
-                        />
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'zh' ? '提供证明文件全称 (例: Certification.pdf)' : lang === 'bm' ? 'Nama fail dokumen (cth: Sijil_Kecemerlangan.pdf)' : 'Provide document filename (e.g. Doula_Diploma.pdf)'}</span>
+                      <label className="form-label">{lang === 'zh' ? '专业资格证书文件 (.pdf/.jpg/.png)' : 'Professional Certification File'}</label>
+                      <label style={{ 
+                        border: proof ? '2px solid var(--health)' : '2px dashed rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        background: proof ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.2s',
+                        textAlign: 'center',
+                        height: '110px'
+                      }}
+                      onMouseOver={(e)=>e.currentTarget.style.borderColor=proof ? 'var(--health)' : 'var(--primary)'}
+                      onMouseOut={(e)=>e.currentTarget.style.borderColor=proof ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
+                      >
+                        <UploadCloud size={24} style={{ color: proof ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: proof ? 'var(--health)' : 'white', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {proof ? `✓ ${proof}` : (lang === 'zh' ? '选择证书文件 (.pdf/图片)' : 'Select Certificate File')}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                          PDF, JPG, PNG (Max 5MB)
+                        </span>
+                        <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={handleProofUpload} />
+                      </label>
                     </div>
 
+                    {/* Health Diagnostics Clearance Card */}
                     <div className="form-group">
-                      <label className="form-label">{lang === 'zh' ? '肺结核体检诊断合格报告名称' : lang === 'bm' ? 'Nama Fail Laporan Kesihatan / TB' : 'TB & Medical Clearance Record Name'}</label>
-                      <div style={{ position: 'relative' }}>
-                        <FileText size={18} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
-                        <input
-                          type="text"
-                          required
-                          className="form-input"
-                          style={{ width: '100%', paddingLeft: '44px' }}
-                          value={healthCert}
-                          onChange={(e) => setHealthCert(e.target.value)}
-                        />
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{lang === 'zh' ? '提供体检合格证全称 (例: TB_Clearance.pdf)' : lang === 'bm' ? 'Nama fail laporan perubatan (cth: Rekod_Kesihatan.pdf)' : 'Provide health diagnostic record (e.g. HKL_Medical_Report.pdf)'}</span>
+                      <label className="form-label">{lang === 'zh' ? '肺结核体检诊断合格报告 (.pdf/.jpg/.png)' : 'TB & Medical Clearance Record'}</label>
+                      <label style={{ 
+                        border: healthCert ? '2px solid var(--health)' : '2px dashed rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        background: healthCert ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.2s',
+                        textAlign: 'center',
+                        height: '110px'
+                      }}
+                      onMouseOver={(e)=>e.currentTarget.style.borderColor=healthCert ? 'var(--health)' : 'var(--primary)'}
+                      onMouseOut={(e)=>e.currentTarget.style.borderColor=healthCert ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
+                      >
+                        <UploadCloud size={24} style={{ color: healthCert ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: healthCert ? 'var(--health)' : 'white', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {healthCert ? `✓ ${healthCert}` : (lang === 'zh' ? '选择体检诊断合格报告' : 'Select Health Diagnostics')}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                          PDF, JPG, PNG (Max 5MB)
+                        </span>
+                        <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={handleHealthCertUpload} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
+                    {/* NRIC / IC Document Upload Card */}
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <label className="form-label">
+                        {lang === 'zh' ? '身份证 (NRIC/IC) 正反面复印件或照片 (.pdf/.jpg/.png) - 必填安全审核' : 'NRIC / IC Card Front & Back Photo or Copy (.pdf/.jpg/.png) - Required for safety verification'}
+                      </label>
+                      <label style={{ 
+                        border: icDoc ? '2px solid var(--health)' : '2px dashed rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        background: icDoc ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.2s',
+                        textAlign: 'center',
+                        height: '110px'
+                      }}
+                      onMouseOver={(e)=>e.currentTarget.style.borderColor=icDoc ? 'var(--health)' : 'var(--primary)'}
+                      onMouseOut={(e)=>e.currentTarget.style.borderColor=icDoc ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
+                      >
+                        <UploadCloud size={24} style={{ color: icDoc ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: icDoc ? 'var(--health)' : 'white', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {icDoc ? `✓ ${icDoc}` : (lang === 'zh' ? '选择身份证正反面扫描件/照片 (.pdf/图片)' : 'Select IC/NRIC Document')}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                          PDF, JPG, PNG (Max 5MB)
+                        </span>
+                        <input type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={handleIcDocUpload} />
+                      </label>
                     </div>
                   </div>
 

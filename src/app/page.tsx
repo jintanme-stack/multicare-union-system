@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import Lightbox from '@/components/Lightbox';
 import { store } from '@/lib/store';
 import { translations, Language } from '@/lib/translations';
 import { Shield, PlusCircle, CheckCircle, Search, HelpCircle, Heart, Users, MapPin, Phone, Megaphone } from 'lucide-react';
@@ -17,6 +18,9 @@ export default function HomePage() {
   const [lang, setLang] = useState<Language>('en');
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [activityPhotos, setActivityPhotos] = useState<any[]>([]);
+  
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     setRequests(store.getCareRequests());
@@ -29,10 +33,15 @@ export default function HomePage() {
     e.preventDefault();
     if (!clientName || !contact || !message) return;
 
+    const generatedKey = Math.floor(100000 + Math.random() * 900000).toString();
+    const clientEmail = contact.includes('@') ? contact.trim() : `${clientName.toLowerCase().replace(/\s+/g, '')}@mcsa.com.my`;
+
     const newReq = {
       id: 'REQ-' + Math.floor(100 + Math.random() * 900),
       name: clientName,
       contact,
+      email: clientEmail,
+      accessKey: generatedKey,
       category,
       message,
       date: new Date().toISOString().split('T')[0]
@@ -45,7 +54,13 @@ export default function HomePage() {
     setClientName('');
     setContact('');
     setMessage('');
-    alert('Care request posted successfully! It will appear on our caregivers dispatch timeline boards.');
+
+    const alertMsg = lang === 'zh'
+      ? `🎉 照护需求发布成功！\n\n您的家属追踪门户登录凭证如下：\n📧 联络邮箱：${clientEmail}\n🔑 安全访问密钥 (Access Key)：${generatedKey}\n\n💡 提示：您可以使用此邮箱与密钥登录 [Family Portal / 家属实时门诊追踪通道]，随时查看健康记录与看护进度。请妥善保存！`
+      : lang === 'bm'
+      ? `🎉 Permohonan Penjagaan Berjaya Dihantar!\n\nButiran log masuk Portal Keluarga anda:\n📧 E-mel: ${clientEmail}\n🔑 Kunci Akses (Access Key): ${generatedKey}\n\n💡 Info: Sila simpan kredensial ini! Anda boleh menggunakannya untuk log masuk ke [Family Portal] untuk menjejaki kemajuan penjagaan secara langsung.`
+      : `🎉 Care Request Posted Successfully!\n\nYour Family Portal login credentials:\n📧 Contact Email: ${clientEmail}\n🔑 Secure Access Key (Access Key): ${generatedKey}\n\n💡 Info: Please save these details! You can use them to log into the [Family Portal] to track live care progress and logs.`;
+    alert(alertMsg);
   };
 
   const t = translations[lang] || translations.en;
@@ -65,10 +80,10 @@ export default function HomePage() {
           <img 
             src="/mcsa-logo.png" 
             alt="MCSA Logo" 
-            style={{ width: '110px', height: '110px', objectFit: 'contain', margin: '0 auto 1.5rem auto', filter: 'drop-shadow(0 4px 10px rgba(37,99,235,0.25))' }} 
+            style={{ display: 'block', width: '110px', height: '110px', objectFit: 'contain', margin: '0 auto 1.5rem auto', filter: 'drop-shadow(0 4px 10px rgba(37,99,235,0.25))' }} 
           />
-          <span className="badge badge-pending" style={{ marginBottom: '1rem', padding: '0.4rem 1rem' }}>
-            🏆 {lang === 'zh' ? '马来西亚优质认证护理人员工会 / MCSA 官方网站' : lang === 'bm' ? 'Persatuan Penjaga Bertauliah Terkemuka di Malaysia' : 'Top Accredited Caregiver Association in Malaysia'}
+          <span className="badge badge-pending" style={{ display: 'inline-block', marginBottom: '1rem', padding: '0.4rem 1rem' }}>
+            🏆 {lang === 'zh' ? '马来西亚优质认证护理人员公会 / MCSA 官方网站' : lang === 'bm' ? 'Persatuan Penjaga Bertauliah Terkemuka di Malaysia' : 'Top Accredited Caregiver Association in Malaysia'}
           </span>
           <h1 style={{
             fontSize: '3.2rem',
@@ -108,7 +123,7 @@ export default function HomePage() {
           gap: '1.5rem'
         }}>
           {[
-            { num: '10,000+', title: lang === 'zh' ? '认证工会会员' : lang === 'bm' ? 'Ahli Bertauliah' : 'Accredited Members' },
+            { num: '10,000+', title: lang === 'zh' ? '认证公会会员' : lang === 'bm' ? 'Ahli Bertauliah' : 'Accredited Members' },
             { num: '50+', title: lang === 'zh' ? '合作医疗机构' : lang === 'bm' ? 'Hospital Rakan Kongsi' : 'Partner Hospitals' },
             { num: '100% Vetted', title: lang === 'zh' ? '结核病与全面体检' : lang === 'bm' ? 'Saringan TB & Kesihatan' : 'TB & Health Clearance' },
             { num: 'RM 350/yr', title: lang === 'zh' ? '实惠的年度考核' : lang === 'bm' ? 'Yuran Lesen Mampu Milik' : 'Affordable Licensure' }
@@ -133,26 +148,60 @@ export default function HomePage() {
               {t.home.partnerDesc}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: '1 1 300px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: '1 1 400px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            {/* Caredemy Logo */}
             <div style={{
               background: '#ffffff',
-              padding: '1.5rem',
+              padding: '1.25rem',
               borderRadius: '16px',
               boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              width: '240px'
+              width: '180px',
+              height: '180px',
+              justifyContent: 'center'
             }}>
               <img 
                 src="/caredemy-logo.jpg" 
                 alt="Caredemy Logo" 
-                style={{ width: '100%', height: 'auto', maxHeight: '130px', objectFit: 'contain' }} 
+                style={{ width: '100%', height: 'auto', maxHeight: '95px', objectFit: 'contain' }} 
               />
-              <span style={{ fontSize: '0.75rem', color: '#1e3a8a', fontWeight: 'bold', marginTop: '0.75rem', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '0.65rem', color: '#1e3a8a', fontWeight: 'bold', marginTop: '0.5rem', letterSpacing: '0.05em', textAlign: 'center' }}>
                 CAREDEMY TRAINING CENTER
               </span>
             </div>
+
+            {/* A+ Assist Logo Link */}
+            <a 
+              href="https://www.facebook.com/share/g/1EKSwSZ9Nj/?mibextid=wwXIfr" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style={{ textDecoration: 'none', display: 'block', transition: 'transform 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              <div style={{
+                background: '#0d162d',
+                padding: '1.25rem',
+                borderRadius: '16px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                width: '180px',
+                height: '180px',
+                justifyContent: 'center',
+                border: '1px solid rgba(255,255,255,0.06)',
+                cursor: 'pointer'
+              }}>
+                <img 
+                  src="/aplus-assist-logo.jpg" 
+                  alt="A+ Assist Logo" 
+                  style={{ width: '100%', height: 'auto', maxHeight: '135px', objectFit: 'contain', borderRadius: '8px' }} 
+                />
+              </div>
+            </a>
           </div>
         </div>
       </section>
@@ -188,6 +237,56 @@ export default function HomePage() {
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>{t.home.demandTitle} / {lang === 'zh' ? '实时诉求发布' : lang === 'bm' ? 'Siaran Permintaan Langsung' : 'Live Demand Broadcast'}</h2>
             <p style={{ color: 'var(--text-muted)' }}>{t.home.demandSubtitle}</p>
+          </div>
+
+          {/* Family Portal Login Reminder & Security Guard Notice */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.85) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderLeft: '5px solid var(--primary)',
+            padding: '1.75rem 2.25rem',
+            borderRadius: '20px',
+            marginBottom: '2.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1.5rem',
+            textAlign: 'left',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '12px',
+              background: 'rgba(37, 99, 235, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Shield size={28} style={{ color: 'var(--primary)' }} />
+            </div>
+            <div style={{ flexGrow: 1 }}>
+              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: '0 0 0.4rem 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit, sans-serif' }}>
+                {lang === 'zh' ? '🔒 家属追踪门户安全登录指引' : lang === 'bm' ? '🔒 Panduan Log Masuk Portal Keluarga Selamat' : '🔒 Secure Family Portal Access Guide'}
+                <span className="badge badge-active" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--health)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  {lang === 'zh' ? '安全认证加密' : lang === 'bm' ? 'Diverifikasi' : 'Security Vetted'}
+                </span>
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                {lang === 'zh' 
+                  ? '所有发布护理需求的家属均会获得系统生成的 6 位安全访问密钥 (Access Key)。您可以通过顶栏的“公会入口”选择“患者家属”面板，使用您的联络邮箱和密钥登录，实时追踪护理员的每日生命体征、康复进度及母婴照护日志。我们的系统已实施严格的二段匹配鉴权，以确保您的隐私绝不外泄。'
+                  : lang === 'bm'
+                  ? 'Setiap permohonan penjagaan akan menjana Kunci Akses 6-digit yang selamat. Anda boleh log masuk di tab "Portal Keluarga" melalui butang "Portal Kesatuan" di atas menggunakan e-mel serta kunci tersebut untuk menjejaki catatan harian dan laporan kesihatan pesakit secara masa nyata.'
+                  : 'Every posted care request generates a unique 6-digit Secure Access Key. Click "Union Portal" at the top, select the "Family Portal" tab, and log in with your contact email and access key to view real-time health diaries, newborn logs, and shift milestones. Our strict credential-matching keeps your family data safe.'}
+              </p>
+              <div style={{ marginTop: '0.85rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <a href="/login" style={{ fontSize: '0.82rem', color: '#60a5fa', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                  🔑 {lang === 'zh' ? '立即前往家属登录入口' : lang === 'bm' ? 'Log Masuk Portal Keluarga Sekarang' : 'Go to Family Login Portal'} &rarr;
+                </a>
+              </div>
+            </div>
           </div>
 
           <div className="grid-cols-2">
@@ -228,10 +327,11 @@ export default function HomePage() {
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                   >
-                    <option value="Confinement Care">🍼 {lang === 'zh' ? 'Confinement Lady / 月嫂' : lang === 'bm' ? 'Penjaga Berpantang' : 'Confinement Care'}</option>
-                    <option value="Patient Companion">🏥 {lang === 'zh' ? 'Patient Companion / 陪诊人员' : lang === 'bm' ? 'Peneman Pesakit' : 'Patient Companion'}</option>
+                    <option value="Confinement Care">🍼 {lang === 'zh' ? '月嫂 / 坐月护理 (Confinement Care)' : lang === 'bm' ? 'Penjaga Berpantang' : 'Confinement Care'}</option>
+                    <option value="Patient Companion">🏥 {lang === 'zh' ? '就医陪诊 / 陪诊员 (Patient Companion)' : lang === 'bm' ? 'Peneman Pesakit' : 'Patient Companion'}</option>
                     <option value="Elderly Caregiver">👴 {lang === 'zh' ? 'Elderly Caregiver / 养老护理员' : lang === 'bm' ? 'Penjaga Warga Emas' : 'Elderly Caregiver'}</option>
                     <option value="Rehabilitation Care Assistant">💪 {lang === 'zh' ? 'Rehab Therapist / 康复助理' : lang === 'bm' ? 'Pembantu Rehab' : 'Rehab Assistant'}</option>
+                    <option value="Babysitter Service">👶 {lang === 'zh' ? 'Babysitter / 专业保姆' : lang === 'bm' ? 'Pengasuh Bayi' : 'Babysitter Service'}</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -265,7 +365,14 @@ export default function HomePage() {
                     <div key={req.id} className="card" style={{ margin: 0, padding: '1.25rem', borderLeft: '4px solid var(--accent)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                         <span className="badge badge-active" style={{ fontSize: '0.72rem' }}>{req.category}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📅 {req.date}</span>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <span className={`badge ${req.status === 'accepted' ? 'badge-active' : 'badge-pending'}`} style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem', border: req.status === 'accepted' ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(245,158,11,0.2)' }}>
+                            {req.status === 'accepted' 
+                              ? (lang === 'zh' ? '已匹配派单' : lang === 'bm' ? 'Tugasan Dipadankan' : 'Assigned') 
+                              : (lang === 'zh' ? '寻找看护中' : lang === 'bm' ? 'Mencari Penjaga' : 'Matching...')}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📅 {req.date}</span>
+                        </div>
                       </div>
                       <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: '0 0 0.5rem 0' }}>Request by: {req.name}</h4>
                       <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.4, margin: '0 0 1rem 0' }}>
@@ -315,12 +422,20 @@ export default function HomePage() {
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <span className="badge badge-active" style={{ marginBottom: '0.75rem' }}>📸 {lang === 'zh' ? '实操培训与公会活动' : lang === 'bm' ? 'Aktiviti Latihan & Kesatuan Serta-Merta' : 'On-Site Training & Union Activities'}</span>
             <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: '#ffffff' }}>{lang === 'zh' ? '最新护理员考核与毕业掠影' : lang === 'bm' ? 'Kemuncak Penilaian & Graduasi Penjaga Terkini' : 'Latest Caregiver Vetting & Graduation Highlights'}</h2>
-            <p style={{ color: 'var(--text-muted)' }}>{lang === 'zh' ? '在工会认证培训基地进行的合规认证、诊断筛查以及模拟演练。' : lang === 'bm' ? 'Sijil penilaian kecekapan, pemeriksaan kesihatan, dan latihan simulasi di tapak latihan rasmi kami.' : 'Vetting certifications, diagnostic clearances, and simulation drills at our designated training base.'}</p>
+            <p style={{ color: 'var(--text-muted)' }}>{lang === 'zh' ? '在公会认证培训基地进行的合规认证、诊断筛查以及模拟演练。' : lang === 'bm' ? 'Sijil penilaian kecekapan, pemeriksaan kesihatan, dan latihan simulasi di tapak latihan rasmi kami.' : 'Vetting certifications, diagnostic clearances, and simulation drills at our designated training base.'}</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-            {activityPhotos.map((photo) => (
-              <div key={photo.id} className="card animate-fade-in" style={{ padding: 0, overflow: 'hidden', margin: 0, display: 'flex', flexDirection: 'column' }}>
+            {activityPhotos.map((photo, index) => (
+              <div 
+                key={photo.id} 
+                onClick={() => {
+                  setLightboxIndex(index);
+                  setShowLightbox(true);
+                }}
+                className="card animate-fade-in" 
+                style={{ padding: 0, overflow: 'hidden', margin: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+              >
                 <div style={{ height: '280px', overflow: 'hidden', position: 'relative' }}>
                   <img 
                     src={photo.url} 
@@ -328,13 +443,13 @@ export default function HomePage() {
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />
                   <span style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(15,23,42,0.85)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 'bold' }}>
-                    {lang === 'zh' ? '工会活动' : lang === 'bm' ? 'Aktiviti Kesatuan' : 'MCSA Activity'}
+                    {lang === 'zh' ? '公会活动' : lang === 'bm' ? 'Aktiviti Kesatuan' : 'MCSA Activity'}
                   </span>
                 </div>
                 <div style={{ padding: '1.5rem' }}>
                   <h4 style={{ color: '#ffffff', fontSize: '1.15rem', marginBottom: '0.5rem' }}>{photo.caption}</h4>
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
-                    {lang === 'zh' ? '在工会官方认证培训基地进行的高标准专业实操考核或急救演练。' : lang === 'bm' ? 'Penilaian praktikal standard tinggi atau latihan kecemasan yang dijalankan di pusat latihan rasmi.' : 'High-standard professional practical assessment or emergency drill conducted at our designated training base.'}
+                    {lang === 'zh' ? '在公会官方认证培训基地进行的高标准专业实操考核或急救演练。' : lang === 'bm' ? 'Penilaian praktikal standard tinggi atau latihan kecemasan yang dijalankan di pusat latihan rasmi.' : 'High-standard professional practical assessment or emergency drill conducted at our designated training base.'}
                   </p>
                 </div>
               </div>
@@ -344,6 +459,14 @@ export default function HomePage() {
       </section>
 
       <Footer />
+
+      <Lightbox 
+        isOpen={showLightbox}
+        photos={activityPhotos}
+        currentIndex={lightboxIndex}
+        onClose={() => setShowLightbox(false)}
+        onChangeIndex={(idx) => setLightboxIndex(idx)}
+      />
     </div>
   );
 }

@@ -53,17 +53,27 @@ export default function Navbar() {
           style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '50%', backgroundColor: '#ffffff', padding: '2px' }} 
         />
         <a href="/" style={{
-          fontSize: '1.1rem',
-          fontWeight: 800,
-          color: '#ffffff',
           textDecoration: 'none',
-          fontFamily: 'Outfit, sans-serif',
-          letterSpacing: '0.02em',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          justifyContent: 'center'
         }}>
-          <span style={{ fontSize: '1.05rem', lineHeight: '1.1' }}>MCSA MALAYSIA</span>
-          <span style={{ fontSize: '0.62rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>多元关怀支持公会</span>
+          <span style={{
+            fontSize: '1.05rem',
+            fontWeight: 800,
+            color: '#ffffff',
+            fontFamily: 'Outfit, sans-serif',
+            letterSpacing: '0.02em',
+            lineHeight: '1.1'
+          }}>MCSA MALAYSIA</span>
+          <span style={{
+            fontSize: '0.62rem',
+            fontWeight: 500,
+            color: 'var(--text-muted)',
+            marginTop: '1px',
+            letterSpacing: '0.05em'
+          }}>马来西亚支持关怀总会</span>
         </a>
       </div>
 
@@ -142,6 +152,97 @@ export default function Navbar() {
           </select>
         </div>
       </div>
+
+      {/* Mobile Menu Toggle Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: 'none',
+          background: 'none',
+          border: 'none',
+          color: '#ffffff',
+          cursor: 'pointer',
+          padding: '0.25rem',
+          outline: 'none'
+        }}
+        className="mobile-toggle"
+      >
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Mobile Menu Drawer */}
+      {isOpen && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '1.5rem 2rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            zIndex: 99
+          }}
+          className="mobile-nav animate-fade-in"
+        >
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              style={{
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                textDecoration: 'none',
+                color: currentPath === link.href ? '#ffffff' : 'var(--text-muted)',
+                padding: '0.5rem 0',
+                borderBottom: '1px solid rgba(255,255,255,0.02)'
+              }}
+            >
+              {link.label}
+            </a>
+          ))}
+          <a
+            href="/login"
+            className="btn btn-primary"
+            style={{
+              padding: '0.6rem 1.25rem',
+              fontSize: '0.9rem',
+              borderRadius: '8px',
+              textAlign: 'center',
+              justifyContent: 'center',
+              marginTop: '0.5rem'
+            }}
+          >
+            {t.nav.portalLogin} <ExternalLink size={14} />
+          </a>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Language / 语言:</span>
+            <select 
+              value={lang} 
+              onChange={(e) => handleLangChange(e.target.value as Language)}
+              style={{
+                backgroundColor: 'rgba(30, 41, 59, 0.7)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '6px',
+                padding: '0.35rem 0.6rem',
+                color: '#ffffff',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <option value="en">EN</option>
+              <option value="bm">BM</option>
+              <option value="zh">中文</option>
+            </select>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

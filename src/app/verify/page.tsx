@@ -150,11 +150,20 @@ export default function VerifyPage() {
                           MCSA MALAYSIA VALIDATED REGISTRY
                         </span>
                       </div>
-                      <img 
-                        src="/mcsa-logo.png" 
-                        alt="MCSA Logo" 
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'white', padding: '1px' }} 
-                      />
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                        {(member.category || '').includes('Patient Companion') && (
+                          <img 
+                            src="/aplus-assist-logo.jpg" 
+                            alt="A+ Assist Logo" 
+                            style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: '#0d162d', objectFit: 'contain', padding: '1px' }} 
+                          />
+                        )}
+                        <img 
+                          src="/mcsa-logo.png" 
+                          alt="MCSA Logo" 
+                          style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'white', padding: '1px' }} 
+                        />
+                      </div>
                     </div>
                     
                     {/* Chip & Photo Row */}
