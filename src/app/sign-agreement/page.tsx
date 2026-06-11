@@ -198,7 +198,7 @@ export default function SignAgreementPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0b1329', color: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
       <Navbar />
 
       <section style={{
@@ -305,7 +305,7 @@ export default function SignAgreementPage() {
                     <h4 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '1rem', fontFamily: 'Outfit' }}>
                       🤝 老人照护条款细则 / Terms & Conditions
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '200px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.75rem', borderRadius: '8px', background: '#0b1329', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '200px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-main)', lineHeight: '1.5' }}>
                       <p>
                         <strong>第一条 服务内容 / Scope of Services</strong><br />
                         乙方同意向甲方指定之长者提供非医疗性质之照护服务，包括日常生活照顾、陪伴服务、协助进食、个人卫生护理、服药提醒、陪诊服务、简单家务及其他约定服务。<br />
@@ -719,7 +719,7 @@ export default function SignAgreementPage() {
                   {/* Legal Terms Block */}
                   <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', marginBottom: '2.5rem', fontSize: '0.85rem' }}>
                     <h4 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '1rem', fontFamily: 'Outfit' }}>🤝 Medical Escort Service Authorization & Liability Agreement / 陪诊服务协议与责任告知书</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '160px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.75rem', borderRadius: '8px', background: '#0b1329', lineHeight: '1.4' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '160px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-main)', lineHeight: '1.4' }}>
                       <p><strong>第一条 服务内容 / Article 1 Service Scope</strong><br />乙方仅提供非医疗类流程协助，包括陪同挂号、就诊引导、代取药、代缴费、路线指引等，不属于急救及 clinical 医护监护范畴。</p>
                       <p><strong>第二条 医疗行为禁止声明 / Article 2 Prohibition of Medical Practice</strong><br />乙方及陪诊员非注册医生或护士，不提供任何临床诊疗意见及诊断决策。</p>
                       <p><strong>第三条 医疗文件代签授权与限制 / Article 3 Authorization & Restriction for Signing</strong><br />甲方书面同意乙方代签纯行政/非医疗登记，但绝对严禁代替甲方签署任何手术、麻醉及高危医疗处置知情同意书。</p>

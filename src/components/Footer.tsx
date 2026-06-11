@@ -65,10 +65,10 @@ export default function Footer() {
 
   return (
     <footer style={{
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+      background: 'linear-gradient(to bottom, #f0fbfb 0%, #ffffff 100%)',
+      borderTop: '1px solid rgba(10, 186, 181, 0.15)',
       padding: '4rem 2rem 2rem 2rem',
-      color: '#94a3b8',
+      color: '#475569',
       fontSize: '0.9rem'
     }}>
       <div style={{
@@ -85,10 +85,10 @@ export default function Footer() {
             <img 
               src="/mcsa-logo.png" 
               alt="MCSA Logo" 
-              style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'white', padding: '2px' }} 
+              style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'white', padding: '2px', border: '1px solid rgba(10, 186, 181, 0.15)' }} 
             />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: 0, fontFamily: 'Outfit', lineHeight: '1.1' }}>
+              <h4 style={{ color: '#088c87', fontSize: '1.05rem', margin: 0, fontFamily: 'Outfit', lineHeight: '1.1' }}>
                 MCSA MALAYSIA
               </h4>
               <span style={{
@@ -100,33 +100,33 @@ export default function Footer() {
               }}>马来西亚支持关怀总会</span>
             </div>
           </div>
-          <p style={{ lineHeight: 1.6, marginBottom: '1.5rem' }}>
+          <p style={{ lineHeight: 1.6, marginBottom: '1.5rem', color: '#475569' }}>
             {footerInfo.desc || t.footer.desc}
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={16} /> {footerInfo.address}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Phone size={16} /> {footerInfo.phone}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={16} /> {footerInfo.email}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={16} style={{ color: '#0abab5' }} /> {footerInfo.address}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Phone size={16} style={{ color: '#0abab5' }} /> {footerInfo.phone}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={16} style={{ color: '#0abab5' }} /> {footerInfo.email}</span>
           </div>
         </div>
 
         {/* Links column */}
         <div>
-          <h4 style={{ color: '#ffffff', fontSize: '1.1rem', marginBottom: '1.2rem', fontFamily: 'Outfit' }}>
+          <h4 style={{ color: '#0f172a', fontSize: '1.1rem', marginBottom: '1.2rem', fontFamily: 'Outfit' }}>
             {t.footer.quickLinks}
           </h4>
           <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <li><a href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.home}</a></li>
-            <li><a href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.about}</a></li>
-            <li><a href="/services" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.services}</a></li>
-            <li><a href="/verify" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.verify}</a></li>
-            <li><a href="/membership" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t.nav.membership}</a></li>
+            <li><a href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0abab5'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{t.nav.home}</a></li>
+            <li><a href="/about" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0abab5'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{t.nav.about}</a></li>
+            <li><a href="/services" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0abab5'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{t.nav.services}</a></li>
+            <li><a href="/verify" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0abab5'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{t.nav.verify}</a></li>
+            <li><a href="/membership" style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={(e) => e.currentTarget.style.color = '#0abab5'} onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}>{t.nav.membership}</a></li>
           </ul>
         </div>
 
         {/* Quick Query column */}
         <div>
-          <h4 style={{ color: '#ffffff', fontSize: '1.1rem', marginBottom: '1.2rem', fontFamily: 'Outfit' }}>
+          <h4 style={{ color: '#0f172a', fontSize: '1.1rem', marginBottom: '1.2rem', fontFamily: 'Outfit' }}>
             {lang === 'zh' ? '客服咨询' : lang === 'bm' ? 'Pertanyaan Sokongan Segera' : 'Quick Support Query'}
           </h4>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -137,10 +137,11 @@ export default function Footer() {
               style={{
                 padding: '0.65rem 0.85rem',
                 borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.02)',
-                color: '#ffffff',
-                fontSize: '0.85rem'
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#1e293b',
+                fontSize: '0.85rem',
+                outline: 'none'
               }}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -152,10 +153,11 @@ export default function Footer() {
               style={{
                 padding: '0.65rem 0.85rem',
                 borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.02)',
-                color: '#ffffff',
-                fontSize: '0.85rem'
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#1e293b',
+                fontSize: '0.85rem',
+                outline: 'none'
               }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -167,11 +169,12 @@ export default function Footer() {
               style={{
                 padding: '0.65rem 0.85rem',
                 borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.02)',
-                color: '#ffffff',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#1e293b',
                 fontSize: '0.85rem',
-                resize: 'none'
+                resize: 'none',
+                outline: 'none'
               }}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -195,7 +198,7 @@ export default function Footer() {
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
+        borderTop: '1px solid rgba(10, 186, 181, 0.15)',
         paddingTop: '1.5rem',
         textAlign: 'center',
         fontSize: '0.8rem',

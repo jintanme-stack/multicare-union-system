@@ -66,49 +66,91 @@ export default function HomePage() {
   const t = translations[lang] || translations.en;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0b1329', color: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
       <Navbar />
 
       {/* Hero Section */}
       <section style={{
         padding: '5rem 2rem',
-        textAlign: 'center',
         position: 'relative',
-        background: 'radial-gradient(circle at center, rgba(37,99,235,0.15) 0%, transparent 60%)'
+        background: 'linear-gradient(135deg, #f0fbfb 0%, #ffffff 100%)',
+        overflow: 'hidden'
       }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <img 
-            src="/mcsa-logo.png" 
-            alt="MCSA Logo" 
-            style={{ display: 'block', width: '110px', height: '110px', objectFit: 'contain', margin: '0 auto 1.5rem auto', filter: 'drop-shadow(0 4px 10px rgba(37,99,235,0.25))' }} 
-          />
-          <span className="badge badge-pending" style={{ display: 'inline-block', marginBottom: '1rem', padding: '0.4rem 1rem' }}>
-            🏆 {lang === 'zh' ? '马来西亚优质认证护理人员公会 / MCSA 官方网站' : lang === 'bm' ? 'Persatuan Penjaga Bertauliah Terkemuka di Malaysia' : 'Top Accredited Caregiver Association in Malaysia'}
-          </span>
-          <h1 style={{
-            fontSize: '3.2rem',
-            fontWeight: 800,
-            lineHeight: 1.1,
-            marginBottom: '1.5rem',
-            fontFamily: 'Outfit, sans-serif'
-          }}>
-            {t.home.heroTitle}
-          </h1>
-          <p style={{
-            fontSize: '1.15rem',
-            color: 'var(--text-muted)',
-            lineHeight: 1.6,
-            marginBottom: '2.5rem'
-          }}>
-            {t.home.heroSubtitle}
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <a href="/register" className="btn btn-primary" style={{ padding: '0.9rem 2rem', borderRadius: '12px' }}>
-              ✍️ {t.home.registerBtn}
-            </a>
-            <a href="/verify" className="btn btn-outline" style={{ padding: '0.9rem 2rem', borderRadius: '12px' }}>
-              🔍 {t.home.verifyBtn}
-            </a>
+        <div style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: '1.15fr 0.85fr',
+          gap: '4rem',
+          alignItems: 'center',
+        }} className="grid-cols-2">
+          {/* Left Column: Text Content */}
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+              <img 
+                src="/mcsa-logo.png" 
+                alt="MCSA Logo" 
+                style={{ display: 'block', width: '64px', height: '64px', objectFit: 'contain', filter: 'drop-shadow(0 4px 8px rgba(10, 186, 181, 0.2))' }} 
+              />
+              <span className="badge badge-pending" style={{ display: 'inline-block', padding: '0.4rem 1rem', margin: 0 }}>
+                🏆 {lang === 'zh' ? '马来西亚优质认证护理人员公会' : lang === 'bm' ? 'Persatuan Penjaga Bertauliah Terkemuka' : 'Top Accredited Caregiver Association'}
+              </span>
+            </div>
+            <h1 style={{
+              fontSize: '3.2rem',
+              fontWeight: 800,
+              lineHeight: 1.1,
+              marginBottom: '1.5rem',
+              fontFamily: 'Outfit, sans-serif',
+              color: '#0f172a'
+            }}>
+              {t.home.heroTitle}
+            </h1>
+            <p style={{
+              fontSize: '1.15rem',
+              color: 'var(--text-muted)',
+              lineHeight: 1.6,
+              marginBottom: '2.5rem'
+            }}>
+              {t.home.heroSubtitle}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <a href="/register" className="btn btn-primary" style={{ padding: '0.9rem 2rem', borderRadius: '12px' }}>
+                ✍️ {t.home.registerBtn}
+              </a>
+              <a href="/verify" className="btn btn-outline" style={{ padding: '0.9rem 2rem', borderRadius: '12px', borderColor: '#0abab5', color: '#088c87' }}>
+                🔍 {t.home.verifyBtn}
+              </a>
+            </div>
+          </div>
+
+          {/* Right Column: Illustration */}
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+            {/* Backdrop Glow */}
+            <div style={{
+              position: 'absolute',
+              width: '320px',
+              height: '320px',
+              borderRadius: '50%',
+              background: 'rgba(10, 186, 181, 0.15)',
+              filter: 'blur(50px)',
+              zIndex: 0
+            }}></div>
+            <img 
+              src="/malaysian-care-hero.png" 
+              alt="Malaysian Diverse Care" 
+              style={{
+                width: '100%',
+                maxWidth: '460px',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: '24px',
+                boxShadow: '0 20px 40px rgba(10, 186, 181, 0.12)',
+                border: '1px solid rgba(255,255,255,0.8)',
+                zIndex: 1,
+                position: 'relative'
+              }}
+            />
           </div>
         </div>
       </section>
@@ -129,7 +171,7 @@ export default function HomePage() {
             { num: 'RM 350/yr', title: lang === 'zh' ? '实惠的年度考核' : lang === 'bm' ? 'Yuran Lesen Mampu Milik' : 'Affordable Licensure' }
           ].map((stat, idx) => (
             <div key={idx} className="card" style={{ textAlign: 'center', padding: '1.5rem', margin: 0 }}>
-              <h3 style={{ fontSize: '2rem', color: '#60a5fa', margin: '0 0 0.25rem 0' }}>{stat.num}</h3>
+              <h3 style={{ fontSize: '2rem', color: '#0abab5', margin: '0 0 0.25rem 0' }}>{stat.num}</h3>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>{stat.title}</p>
             </div>
           ))}
@@ -137,11 +179,11 @@ export default function HomePage() {
       </section>
 
       {/* Cooperating Partners Section */}
-      <section style={{ padding: '3rem 2rem', borderTop: '1px solid rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.03)', backgroundColor: 'rgba(15, 23, 42, 0.2)' }}>
+      <section style={{ padding: '3rem 2rem', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f0fbfb' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '3rem', flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 300px' }}>
             <span className="badge badge-active" style={{ marginBottom: '0.75rem' }}>{lang === 'zh' ? '战略合作伙伴单位' : lang === 'bm' ? 'Rakan Kongsi Saringan Strategik' : 'Strategic Vetting Partner'}</span>
-            <h2 style={{ fontSize: '1.8rem', color: '#ffffff', marginBottom: '1rem', fontFamily: 'Outfit' }}>
+            <h2 style={{ fontSize: '1.8rem', color: '#0f172a', marginBottom: '1rem', fontFamily: 'Outfit' }}>
               {t.home.partnerTitle}
             </h2>
             <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, margin: 0, fontSize: '0.95rem' }}>
@@ -154,7 +196,8 @@ export default function HomePage() {
               background: '#ffffff',
               padding: '1.25rem',
               borderRadius: '16px',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+              boxShadow: '0 8px 30px rgba(10, 186, 181, 0.08)',
+              border: '1px solid rgba(10, 186, 181, 0.15)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -167,7 +210,7 @@ export default function HomePage() {
                 alt="Caredemy Logo" 
                 style={{ width: '100%', height: 'auto', maxHeight: '95px', objectFit: 'contain' }} 
               />
-              <span style={{ fontSize: '0.65rem', color: '#1e3a8a', fontWeight: 'bold', marginTop: '0.5rem', letterSpacing: '0.05em', textAlign: 'center' }}>
+              <span style={{ fontSize: '0.65rem', color: '#088c87', fontWeight: 'bold', marginTop: '0.5rem', letterSpacing: '0.05em', textAlign: 'center' }}>
                 CAREDEMY TRAINING CENTER
               </span>
             </div>
@@ -182,17 +225,17 @@ export default function HomePage() {
               onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               <div style={{
-                background: '#0d162d',
+                background: '#ffffff',
                 padding: '1.25rem',
                 borderRadius: '16px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                boxShadow: '0 8px 30px rgba(10, 186, 181, 0.08)',
+                border: '1px solid rgba(10, 186, 181, 0.15)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 width: '180px',
                 height: '180px',
                 justifyContent: 'center',
-                border: '1px solid rgba(255,255,255,0.06)',
                 cursor: 'pointer'
               }}>
                 <img 
@@ -207,7 +250,7 @@ export default function HomePage() {
       </section>
 
       {/* Announcements Notice Board */}
-      <section style={{ padding: '4rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.03)', backgroundColor: 'rgba(15, 23, 42, 0.3)' }}>
+      <section style={{ padding: '4rem 2rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <span className="badge badge-pending" style={{ marginBottom: '0.75rem', padding: '0.3rem 0.8rem' }}>
@@ -223,7 +266,7 @@ export default function HomePage() {
                   <span className="badge badge-active" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>{ann.category}</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📅 {ann.date}</span>
                 </div>
-                <h4 style={{ color: '#ffffff', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{ann.title}</h4>
+                <h4 style={{ color: '#0f172a', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{ann.title}</h4>
                 <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>{ann.content}</p>
               </div>
             ))}
@@ -232,17 +275,17 @@ export default function HomePage() {
       </section>
 
       {/* Care Demands Board (Dual Column Split) */}
-      <section style={{ padding: '4rem 2rem', backgroundColor: 'rgba(15, 23, 42, 0.4)', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+      <section style={{ padding: '4rem 2rem', backgroundColor: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>{t.home.demandTitle} / {lang === 'zh' ? '实时诉求发布' : lang === 'bm' ? 'Siaran Permintaan Langsung' : 'Live Demand Broadcast'}</h2>
+            <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: '#0f172a' }}>{t.home.demandTitle} / {lang === 'zh' ? '实时诉求发布' : lang === 'bm' ? 'Siaran Permintaan Langsung' : 'Live Demand Broadcast'}</h2>
             <p style={{ color: 'var(--text-muted)' }}>{t.home.demandSubtitle}</p>
           </div>
 
           {/* Family Portal Login Reminder & Security Guard Notice */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.85) 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'linear-gradient(135deg, #f0fbfb 0%, #ffffff 100%)',
+            border: '1px solid rgba(10, 186, 181, 0.15)',
             borderLeft: '5px solid var(--primary)',
             padding: '1.75rem 2.25rem',
             borderRadius: '20px',
@@ -251,7 +294,7 @@ export default function HomePage() {
             alignItems: 'center',
             gap: '1.5rem',
             textAlign: 'left',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            boxShadow: '0 10px 30px rgba(10, 186, 181, 0.04)',
             position: 'relative',
             overflow: 'hidden'
           }}>
@@ -259,7 +302,7 @@ export default function HomePage() {
               width: '56px',
               height: '56px',
               borderRadius: '12px',
-              background: 'rgba(37, 99, 235, 0.15)',
+              background: 'var(--primary-glow)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -268,7 +311,7 @@ export default function HomePage() {
               <Shield size={28} style={{ color: 'var(--primary)' }} />
             </div>
             <div style={{ flexGrow: 1 }}>
-              <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: '0 0 0.4rem 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit, sans-serif' }}>
+              <h3 style={{ fontSize: '1.2rem', color: '#0f172a', margin: '0 0 0.4rem 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit, sans-serif' }}>
                 {lang === 'zh' ? '🔒 家属追踪门户安全登录指引' : lang === 'bm' ? '🔒 Panduan Log Masuk Portal Keluarga Selamat' : '🔒 Secure Family Portal Access Guide'}
                 <span className="badge badge-active" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--health)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   {lang === 'zh' ? '安全认证加密' : lang === 'bm' ? 'Diverifikasi' : 'Security Vetted'}
@@ -276,13 +319,13 @@ export default function HomePage() {
               </h3>
               <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
                 {lang === 'zh' 
-                  ? '所有发布护理需求的家属均会获得系统生成的 6 位安全访问密钥 (Access Key)。您可以通过顶栏的“公会入口”选择“患者家属”面板，使用您的联络邮箱和密钥登录，实时追踪护理员的每日生命体征、康复进度及母婴照护日志。我们的系统已实施严格的二段匹配鉴权，以确保您的隐私绝不外泄。'
+                  ? '所有发布护理需求的家属均会获得系统生成的 6 位安全访问密钥 (Access Key)。您可以通过顶栏的“公会入口”选择“患者家属”面板，使用您的联络邮箱和密钥登录，实时追踪护理员的每日生命体征、康复进度及母婴照护日志。我们的系统已实施严格 of 二段匹配鉴权，以确保您的隐私绝不外泄。'
                   : lang === 'bm'
                   ? 'Setiap permohonan penjagaan akan menjana Kunci Akses 6-digit yang selamat. Anda boleh log masuk di tab "Portal Keluarga" melalui butang "Portal Kesatuan" di atas menggunakan e-mel serta kunci tersebut untuk menjejaki catatan harian dan laporan kesihatan pesakit secara masa nyata.'
                   : 'Every posted care request generates a unique 6-digit Secure Access Key. Click "Union Portal" at the top, select the "Family Portal" tab, and log in with your contact email and access key to view real-time health diaries, newborn logs, and shift milestones. Our strict credential-matching keeps your family data safe.'}
               </p>
               <div style={{ marginTop: '0.85rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <a href="/login" style={{ fontSize: '0.82rem', color: '#60a5fa', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                <a href="/login" style={{ fontSize: '0.82rem', color: '#088c87', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                   🔑 {lang === 'zh' ? '立即前往家属登录入口' : lang === 'bm' ? 'Log Masuk Portal Keluarga Sekarang' : 'Go to Family Login Portal'} &rarr;
                 </a>
               </div>
@@ -294,7 +337,7 @@ export default function HomePage() {
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
                 <PlusCircle size={20} style={{ color: 'var(--accent)' }} />
-                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{t.home.postDemandTitle}</h3>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a' }}>{t.home.postDemandTitle}</h3>
               </div>
               <form onSubmit={handlePostRequest}>
                 <div className="form-group">
@@ -323,7 +366,7 @@ export default function HomePage() {
                   <label className="form-label">{t.home.categoryLabel}</label>
                   <select
                     className="form-input"
-                    style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
+                    style={{ background: 'var(--bg-input)', color: 'var(--text-main)', cursor: 'pointer', border: '1.5px solid var(--border)' }}
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                   >
@@ -354,7 +397,7 @@ export default function HomePage() {
 
             {/* Right: Demand Listing Board */}
             <div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <CheckCircle size={20} style={{ color: 'var(--health)' }} /> {lang === 'zh' ? '公开护理调度单' : lang === 'bm' ? 'Tugasan Terbuka Awam' : 'Active Client Dispatches'} ({requests.length})
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '550px', overflowY: 'auto', paddingRight: '0.5rem' }}>
@@ -374,7 +417,7 @@ export default function HomePage() {
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>📅 {req.date}</span>
                         </div>
                       </div>
-                      <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: '0 0 0.5rem 0' }}>Request by: {req.name}</h4>
+                      <h4 style={{ color: '#0f172a', fontSize: '1.05rem', margin: '0 0 0.5rem 0' }}>Request by: {req.name}</h4>
                       <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.4, margin: '0 0 1rem 0' }}>
                         "{req.message}"
                       </p>
@@ -384,18 +427,19 @@ export default function HomePage() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        background: 'rgba(15,23,42,0.3)',
+                        background: 'rgba(240, 251, 251, 0.5)',
                         padding: '0.65rem 0.85rem',
                         borderRadius: '8px',
                         fontSize: '0.8rem',
-                        border: '1px dashed rgba(255,255,255,0.06)'
+                        border: '1px dashed rgba(10, 186, 181, 0.2)',
+                        color: '#1e293b'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <Phone size={14} style={{ color: 'var(--accent)' }} />
                           <span>{lang === 'zh' ? '联系电话: ' : lang === 'bm' ? 'Telefon: ' : 'Contact: '} </span>
                           <span style={{ 
                             filter: 'blur(4px)', 
-                            backgroundColor: '#475569', 
+                            backgroundColor: '#cbd5e1', 
                             padding: '0 0.5rem', 
                             borderRadius: '3px',
                             userSelect: 'none'
@@ -417,11 +461,11 @@ export default function HomePage() {
       </section>
 
       {/* Activity Photos Section */}
-      <section style={{ padding: '4rem 2rem', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+      <section style={{ padding: '4rem 2rem', borderTop: '1px solid #e2e8f0', backgroundColor: '#fcfdfd' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <span className="badge badge-active" style={{ marginBottom: '0.75rem' }}>📸 {lang === 'zh' ? '实操培训与公会活动' : lang === 'bm' ? 'Aktiviti Latihan & Kesatuan Serta-Merta' : 'On-Site Training & Union Activities'}</span>
-            <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: '#ffffff' }}>{lang === 'zh' ? '最新护理员考核与毕业掠影' : lang === 'bm' ? 'Kemuncak Penilaian & Graduasi Penjaga Terkini' : 'Latest Caregiver Vetting & Graduation Highlights'}</h2>
+            <h2 style={{ fontSize: '2.2rem', marginBottom: '0.5rem', color: '#0f172a' }}>{lang === 'zh' ? '最新护理员考核与毕业掠影' : lang === 'bm' ? 'Kemuncak Penilaian & Graduasi Penjaga Terkini' : 'Latest Caregiver Vetting & Graduation Highlights'}</h2>
             <p style={{ color: 'var(--text-muted)' }}>{lang === 'zh' ? '在公会认证培训基地进行的合规认证、诊断筛查以及模拟演练。' : lang === 'bm' ? 'Sijil penilaian kecekapan, pemeriksaan kesihatan, dan latihan simulasi di tapak latihan rasmi kami.' : 'Vetting certifications, diagnostic clearances, and simulation drills at our designated training base.'}</p>
           </div>
 
@@ -442,12 +486,12 @@ export default function HomePage() {
                     alt={photo.caption} 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />
-                  <span style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(15,23,42,0.85)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 'bold' }}>
+                  <span style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(10, 186, 181, 0.85)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '0.72rem', color: '#ffffff', fontWeight: 'bold' }}>
                     {lang === 'zh' ? '公会活动' : lang === 'bm' ? 'Aktiviti Kesatuan' : 'MCSA Activity'}
                   </span>
                 </div>
                 <div style={{ padding: '1.5rem' }}>
-                  <h4 style={{ color: '#ffffff', fontSize: '1.15rem', marginBottom: '0.5rem' }}>{photo.caption}</h4>
+                  <h4 style={{ color: '#0f172a', fontSize: '1.15rem', marginBottom: '0.5rem' }}>{photo.caption}</h4>
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
                     {lang === 'zh' ? '在公会官方认证培训基地进行的高标准专业实操考核或急救演练。' : lang === 'bm' ? 'Penilaian praktikal standard tinggi atau latihan kecemasan yang dijalankan di pusat latihan rasmi.' : 'High-standard professional practical assessment or emergency drill conducted at our designated training base.'}
                   </p>

@@ -1428,7 +1428,7 @@ export default function CaregiverDashboard() {
   const t = translations[lang] || translations.en;
 
   return (
-    <div className="app-container" style={{ background: '#0b1329' }}>
+    <div className="app-container" style={{ background: 'var(--bg-main)' }}>
       {/* Sidebar with Glassmorphic design */}
       <aside className="sidebar" style={{ background: 'rgba(15, 23, 42, 0.9)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1839,7 +1839,7 @@ export default function CaregiverDashboard() {
                                 position: 'absolute',
                                 left: '-31px',
                                 top: '3px',
-                                border: '4px solid #0b1329',
+                                border: '4px solid var(--bg-main)',
                                 boxShadow: isActive ? '0 0 10px var(--primary)' : isDone ? '0 0 8px var(--health)' : 'none',
                                 transition: 'all 0.2s'
                               }}></div>
@@ -5119,7 +5119,7 @@ export default function CaregiverDashboard() {
                   {/* Escort Authorization & Liability Agreement (陪诊协议条款) */}
                   <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', marginBottom: '2.5rem', fontSize: '0.85rem' }}>
                     <h3 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '1.5rem', fontFamily: 'Outfit' }}>🤝 Medical Escort Service Authorization & Liability Agreement / 陪诊服务协议与责任告知书</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '1rem', borderRadius: '8px', background: '#0b1329' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '1rem', borderRadius: '8px', background: 'var(--bg-main)' }}>
                       <p><strong>第一条 服务内容 / Article 1 Service Scope</strong><br />
                       乙方仅提供非医疗类流程协助，包括：陪同挂号、排队、缴费、检查引导、取药、办理出入院手续、送检、引导路线、协助沟通。<br />
                       Provider only provides non-medical process assistance, including escorting registration, queuing, payment, examination guidance, medication collection, admission/discharge procedures, sample delivery, route guidance, and communication assistance.</p>
@@ -5640,7 +5640,7 @@ export default function CaregiverDashboard() {
                     <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       工会声明 / Union Declaration
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem', borderRadius: '8px', background: '#0b1329', fontSize: '0.82rem', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem', borderRadius: '8px', background: 'var(--bg-main)', fontSize: '0.82rem', lineHeight: '1.5' }}>
                       <p>
                         1. 工会仅作为会员管理、培训及服务配对平台。 / The Union acts solely as a membership, training and matching platform.
                       </p>
@@ -6044,7 +6044,7 @@ export default function CaregiverDashboard() {
                     <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       照护条款细则 / Terms & Conditions
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem', borderRadius: '8px', background: '#0b1329', fontSize: '0.82rem', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem', borderRadius: '8px', background: 'var(--bg-main)', fontSize: '0.82rem', lineHeight: '1.5' }}>
                       <p>
                         <strong>第三条 健康资料披露 / Health Information Disclosure</strong><br />
                         甲方须如实披露长者健康状况，包括慢性疾病、过敏记录、服药情况及其他相关资料。若因隐瞒或错误资料导致损失，乙方无需承担责任。<br />

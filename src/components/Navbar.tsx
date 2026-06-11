@@ -33,10 +33,10 @@ export default function Navbar() {
 
   return (
     <nav style={{
-      backgroundColor: 'rgba(15, 23, 42, 0.85)',
+      backgroundColor: 'rgba(255, 255, 255, 0.85)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      borderBottom: '1px solid rgba(10, 186, 181, 0.12)',
       position: 'sticky',
       top: 0,
       zIndex: 100,
@@ -44,13 +44,13 @@ export default function Navbar() {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      color: '#ffffff'
+      color: '#1e293b'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <img 
           src="/mcsa-logo.png" 
           alt="MCSA Logo" 
-          style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '50%', backgroundColor: '#ffffff', padding: '2px' }} 
+          style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '50%', backgroundColor: '#ffffff', padding: '2px', border: '1px solid rgba(10, 186, 181, 0.15)' }} 
         />
         <a href="/" style={{
           textDecoration: 'none',
@@ -62,7 +62,7 @@ export default function Navbar() {
           <span style={{
             fontSize: '1.05rem',
             fontWeight: 800,
-            color: '#ffffff',
+            color: '#088c87',
             fontFamily: 'Outfit, sans-serif',
             letterSpacing: '0.02em',
             lineHeight: '1.1'
@@ -87,17 +87,17 @@ export default function Navbar() {
               fontSize: '0.85rem',
               fontWeight: 600,
               textDecoration: 'none',
-              color: currentPath === link.href ? '#ffffff' : 'var(--text-muted)',
+              color: currentPath === link.href ? '#088c87' : 'var(--text-muted)',
               borderBottom: currentPath === link.href ? '2px solid var(--primary)' : '2px solid transparent',
               paddingBottom: '0.2rem',
               transition: 'color 0.2s',
               background: link.highlight ? 'var(--primary-glow)' : 'transparent',
               padding: link.highlight ? '0.4rem 0.8rem' : 'initial',
               borderRadius: link.highlight ? '6px' : 'none',
-              border: link.highlight ? '1px solid rgba(37,99,235,0.2)' : 'none'
+              border: link.highlight ? '1px solid rgba(10, 186, 181, 0.2)' : 'none'
             }}
             onMouseOver={(e) => {
-              if (!link.highlight) e.currentTarget.style.color = '#ffffff';
+              if (!link.highlight) e.currentTarget.style.color = '#0abab5';
             }}
             onMouseOut={(e) => {
               if (!link.highlight && currentPath !== link.href) e.currentTarget.style.color = 'var(--text-muted)';
@@ -128,27 +128,27 @@ export default function Navbar() {
             value={lang} 
             onChange={(e) => handleLangChange(e.target.value as Language)}
             style={{
-              backgroundColor: 'rgba(30, 41, 59, 0.7)',
+              backgroundColor: 'rgba(240, 251, 251, 0.8)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(10, 186, 181, 0.2)',
               borderRadius: '6px',
               padding: '0.35rem 0.6rem',
-              color: '#ffffff',
+              color: '#1e293b',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
               outline: 'none',
               appearance: 'none',
-              backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+              backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%231e293b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 8px center',
               backgroundSize: '12px',
               paddingRight: '24px'
             }}
           >
-            <option value="en" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>EN</option>
-            <option value="bm" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>BM</option>
-            <option value="zh" style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>中文</option>
+            <option value="en" style={{ backgroundColor: '#ffffff', color: '#1e293b' }}>EN</option>
+            <option value="bm" style={{ backgroundColor: '#ffffff', color: '#1e293b' }}>BM</option>
+            <option value="zh" style={{ backgroundColor: '#ffffff', color: '#1e293b' }}>中文</option>
           </select>
         </div>
       </div>
@@ -160,7 +160,7 @@ export default function Navbar() {
           display: 'none',
           background: 'none',
           border: 'none',
-          color: '#ffffff',
+          color: '#1e293b',
           cursor: 'pointer',
           padding: '0.25rem',
           outline: 'none'
@@ -178,10 +178,10 @@ export default function Navbar() {
             top: '100%',
             left: 0,
             right: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid rgba(10, 186, 181, 0.15)',
             padding: '1.5rem 2rem',
             display: 'flex',
             flexDirection: 'column',
@@ -198,9 +198,9 @@ export default function Navbar() {
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 textDecoration: 'none',
-                color: currentPath === link.href ? '#ffffff' : 'var(--text-muted)',
+                color: currentPath === link.href ? '#088c87' : 'var(--text-muted)',
                 padding: '0.5rem 0',
-                borderBottom: '1px solid rgba(255,255,255,0.02)'
+                borderBottom: '1px solid rgba(0,0,0,0.04)'
               }}
             >
               {link.label}
@@ -226,11 +226,11 @@ export default function Navbar() {
               value={lang} 
               onChange={(e) => handleLangChange(e.target.value as Language)}
               style={{
-                backgroundColor: 'rgba(30, 41, 59, 0.7)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'rgba(240, 251, 251, 0.8)',
+                border: '1px solid rgba(10, 186, 181, 0.2)',
                 borderRadius: '6px',
                 padding: '0.35rem 0.6rem',
-                color: '#ffffff',
+                color: '#1e293b',
                 fontSize: '0.8rem',
                 fontWeight: 600,
                 cursor: 'pointer'

@@ -24,7 +24,7 @@ export default function AboutPage() {
   const photos = Array.isArray(activityPhotos) ? activityPhotos : [];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0b1329', color: '#f8fafc' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
       <Navbar />
 
       <section style={{

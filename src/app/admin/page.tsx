@@ -644,7 +644,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="app-container" style={{ background: '#0b1329' }}>
+    <div className="app-container" style={{ background: 'var(--bg-main)' }}>
       {/* Sidebar with Glassmorphic design */}
       <aside className="sidebar" style={{ background: 'rgba(15, 23, 42, 0.9)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="sidebar-logo" style={{ fontSize: '1rem', whiteSpace: 'nowrap' }}>
@@ -2185,7 +2185,7 @@ export default function AdminPage() {
                   {/* Escort Authorization & Liability Agreement (陪诊协议条款) */}
                   <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', marginBottom: '2.5rem', fontSize: '0.85rem' }}>
                     <h3 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '1.5rem', fontFamily: 'Outfit' }}>🤝 Medical Escort Service Authorization & Liability Agreement / 陪诊服务协议与责任告知书</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '1rem', borderRadius: '8px', background: '#0b1329' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '1rem', borderRadius: '8px', background: 'var(--bg-main)' }}>
                       <p><strong>第一条 服务内容 / Article 1 Service Scope</strong><br />
                       乙方仅提供非医疗类流程协助，包括：陪同挂号、排队、缴费、检查引导、取药、办理出入院手续、送检、引导路线、协助沟通。<br />
                       Provider only provides non-medical process assistance, including escorting registration, queuing, payment, examination guidance, medication collection, admission/discharge procedures, sample delivery, route guidance, and communication assistance.</p>
@@ -3543,7 +3543,7 @@ export default function AdminPage() {
                   fontWeight: 'bold',
                   transform: 'rotate(-5deg)',
                   textTransform: 'uppercase',
-                  backgroundColor: '#0b1329',
+                  backgroundColor: 'var(--bg-main)',
                   marginRight: 'auto',
                   marginLeft: '1rem'
                 }}>

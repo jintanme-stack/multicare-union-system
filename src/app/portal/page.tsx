@@ -131,7 +131,7 @@ export default function FamilyPortal() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0b1329', color: '#f8fafc', paddingBottom: '3rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', paddingBottom: '3rem' }}>
       {/* Top Header */}
       <header style={{
         backgroundColor: 'rgba(15, 23, 42, 0.8)',
@@ -909,7 +909,7 @@ export default function FamilyPortal() {
                           position: 'absolute',
                           left: '-27px',
                           top: '4px',
-                          border: '3px solid #0b1329',
+                          border: '3px solid var(--border)',
                           boxShadow: isActive ? '0 0 10px var(--primary)' : isDone ? '0 0 8px var(--health)' : 'none'
                         }}></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -946,7 +946,7 @@ export default function FamilyPortal() {
                         position: 'absolute',
                         left: '-26px',
                         top: '4px',
-                        border: '3px solid #0b1329',
+                        border: '3px solid var(--border)',
                         boxShadow: idx === 0 ? '0 0 10px var(--primary)' : 'none'
                       }}></div>
                       

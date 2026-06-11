@@ -111,7 +111,7 @@ export default function EntryPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: '#0b1329',
+      background: 'var(--bg-main)',
       padding: '2rem',
       position: 'relative',
       overflow: 'hidden'
