@@ -79,13 +79,9 @@ export default function HomePage() {
         <div style={{
           maxWidth: '1200px',
           margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: '1.15fr 0.85fr',
-          gap: '4rem',
-          alignItems: 'center',
-        }} className="grid-cols-2">
+        }} className="hero-grid">
           {/* Left Column: Text Content */}
-          <div style={{ textAlign: 'left' }}>
+          <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
               <img 
                 src="/mcsa-logo.png" 
@@ -160,10 +156,7 @@ export default function HomePage() {
         <div style={{
           maxWidth: '1100px',
           margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '1.5rem'
-        }}>
+        }} className="responsive-grid-4">
           {[
             { num: '10,000+', title: lang === 'zh' ? '认证公会会员' : lang === 'bm' ? 'Ahli Bertauliah' : 'Accredited Members' },
             { num: '50+', title: lang === 'zh' ? '合作医疗机构' : lang === 'bm' ? 'Hospital Rakan Kongsi' : 'Partner Hospitals' },

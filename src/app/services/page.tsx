@@ -67,10 +67,7 @@ export default function ServicesPage() {
         <div style={{
           maxWidth: '1100px',
           margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '2.5rem'
-        }}>
+        }} className="responsive-grid-2">
           {serviceDetails.map((service, idx) => (
             <div key={idx} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0, padding: '2rem', borderLeft: '4px solid var(--primary)', boxShadow: '0 8px 30px rgba(10, 186, 181, 0.04)' }}>
               <div>
@@ -90,7 +87,7 @@ export default function ServicesPage() {
                 <span style={{ fontSize: '0.78rem', color: 'var(--accent-dark)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.75rem' }}>
                   {lang === 'zh' ? '公会核心执业胜任标准' : lang === 'bm' ? 'Kecekapan Standard Teras' : 'Core Standard Competencies'}
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="skills-grid">
                   {service.skills.map((skill, sIdx) => (
                     <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: '#1e293b' }}>
                       <CheckSquare size={15} style={{ color: 'var(--health)', flexShrink: 0 }} />
