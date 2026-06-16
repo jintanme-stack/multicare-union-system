@@ -62,7 +62,7 @@ export default function MembershipPage() {
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '3rem', alignItems: 'start' }}>
           {/* Left: Benefits */}
           <div>
-            <h2 style={{ fontSize: '1.6rem', marginBottom: '1.5rem', color: '#ffffff' }}>
+            <h2 style={{ fontSize: '1.6rem', marginBottom: '1.5rem', color: 'var(--text-light)' }}>
               {lang === 'zh' ? '为什么要加入 MCSA 马来西亚公会？' : lang === 'bm' ? 'Kenapa Sertai Kesatuan MCSA Malaysia?' : 'Why Join MultiCare Support Malaysia Union?'}
             </h2>
             
@@ -71,7 +71,7 @@ export default function MembershipPage() {
                 <div key={idx} style={{ display: 'flex', gap: '1rem' }}>
                   <div style={{ flexShrink: 0 }}>{benefit.icon}</div>
                   <div>
-                    <h4 style={{ color: '#ffffff', fontSize: '1.05rem', margin: '0 0 0.25rem 0' }}>{benefit.title}</h4>
+                    <h4 style={{ color: 'var(--text-light)', fontSize: '1.05rem', margin: '0 0 0.25rem 0' }}>{benefit.title}</h4>
                     <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>{benefit.desc}</p>
                   </div>
                 </div>
@@ -83,9 +83,10 @@ export default function MembershipPage() {
           <div className="card" style={{ 
             margin: 0, 
             padding: '2.5rem', 
-            background: 'linear-gradient(135deg, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.8) 100%)', 
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 20px 40px rgba(15,23,42,0.15)',
+            borderRadius: '16px',
             display: 'flex', 
             flexDirection: 'column', 
             justifyContent: 'space-between',
@@ -93,24 +94,46 @@ export default function MembershipPage() {
             textAlign: 'center'
           }}>
             <div>
-              <span className="badge badge-active" style={{ marginBottom: '1rem' }}>
+              <span className="badge" style={{ 
+                marginBottom: '1rem', 
+                background: 'rgba(10, 186, 181, 0.15)', 
+                color: '#0abab5',
+                border: '1px solid rgba(10, 186, 181, 0.3)',
+                padding: '0.35rem 0.75rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                letterSpacing: '0.05em'
+              }}>
                 {lang === 'zh' ? '通过安全审查的执照' : lang === 'bm' ? 'LESEN DISAHKAN' : 'VETTED LICENSE'}
               </span>
-              <h3 style={{ fontSize: '1.5rem', color: '#ffffff', marginBottom: '0.5rem' }}>{t.membership.feeTitle}</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{t.membership.feeDesc}</p>
+              <h3 style={{ fontSize: '1.5rem', color: '#ffffff', fontWeight: 700, marginBottom: '0.5rem', fontFamily: 'Outfit' }}>{t.membership.feeTitle}</h3>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '1.5rem', lineHeight: 1.4 }}>{t.membership.feeDesc}</p>
               
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.2rem', marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--accent)' }}>RM</span>
+                <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)' }}>RM</span>
                 <span style={{ fontSize: '3.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', fontFamily: 'Outfit' }}>350</span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', alignSelf: 'flex-end', paddingBottom: '0.75rem' }}>/ {lang === 'zh' ? '年' : lang === 'bm' ? 'tahun' : 'year'}</span>
+                <span style={{ fontSize: '0.9rem', color: '#94a3b8', alignSelf: 'flex-end', paddingBottom: '0.75rem' }}>/ {lang === 'zh' ? '年' : lang === 'bm' ? 'tahun' : 'year'}</span>
               </div>
             </div>
 
             <div style={{ width: '100%' }}>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '1.5rem' }}>
                 {lang === 'zh' ? '包含电子会员卡核验、医疗纠纷险权益、急救工作标准以及优先派遣推荐展示。' : lang === 'bm' ? 'Termasuk pengesahan kad digital, keutamaan perlindungan insurans, kemas kini SOP, dan kedudukan carian.' : 'Includes digital card validation, medical insurance coverage priority, first-aid SOP updates, and search listing placements.'}
               </p>
-              <a href="/register" className="btn btn-primary" style={{ width: '100%', borderRadius: '10px' }}>
+              <a href="/register" className="btn btn-primary" style={{ 
+                width: '100%', 
+                borderRadius: '10px',
+                background: 'var(--primary)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '0.8rem',
+                fontWeight: 700,
+                boxShadow: '0 4px 14px rgba(10, 186, 181, 0.3)',
+                display: 'inline-block',
+                textDecoration: 'none',
+                transition: 'all 0.2s'
+              }}>
                 {t.membership.registerNow}
               </a>
             </div>

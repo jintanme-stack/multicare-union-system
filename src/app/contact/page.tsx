@@ -12,7 +12,7 @@ export default function ContactPage() {
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !contact || !message) return;
 
@@ -24,8 +24,7 @@ export default function ContactPage() {
       status: 'Pending'
     };
 
-    const currentInquiries = store.getInquiries();
-    store.setInquiries([newInquiry, ...currentInquiries]);
+    await (store as any).appendInquiry(newInquiry);
 
     setName('');
     setContact('');
@@ -69,7 +68,7 @@ export default function ContactPage() {
             {/* Left: Contact Info Info-blocks */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="card" style={{ margin: 0 }}>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <MapPin size={20} style={{ color: 'var(--primary)' }} /> Union Headquarters Office
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.6, margin: 0 }}>
@@ -80,23 +79,23 @@ export default function ContactPage() {
               </div>
 
               <div className="card" style={{ margin: 0 }}>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Phone size={20} style={{ color: 'var(--health)' }} /> Phone & Email Hotlines
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.95rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Member Hotline:</span>
-                    <strong style={{ color: '#ffffff' }}>+60 3-2780 1234</strong>
+                    <strong style={{ color: 'var(--text-main)' }}>+60 3-2780 1234</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Support Email:</span>
-                    <strong style={{ color: '#ffffff', fontFamily: 'monospace' }}>desk@mcsa.com.my</strong>
+                    <strong style={{ color: 'var(--text-main)', fontFamily: 'monospace' }}>desk@mcsa.com.my</strong>
                   </div>
                 </div>
               </div>
 
               <div className="card" style={{ margin: 0 }}>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Clock size={20} style={{ color: 'var(--accent)' }} /> Desk Operations Hours
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1.5, margin: 0 }}>
@@ -112,7 +111,7 @@ export default function ContactPage() {
               {submitted ? (
                 <div style={{ textAlign: 'center', padding: '2rem 1rem' }} className="animate-fade-in">
                   <CheckCircle size={56} style={{ color: 'var(--health)', margin: '0 auto 1.25rem auto' }} />
-                  <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#ffffff' }}>Inquiry Submitted Successfully!</h3>
+                  <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--text-light)' }}>Inquiry Submitted Successfully!</h3>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginBottom: '2rem' }}>
                     Thank you. Your message has been logged in our Operations Desk system database. An administrator will review it and contact you shortly.
                   </p>
@@ -122,7 +121,7 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <MessageSquare size={20} style={{ color: 'var(--accent)' }} /> Send a Message / 在线留言
                   </h3>
                   <form onSubmit={handleSubmit}>

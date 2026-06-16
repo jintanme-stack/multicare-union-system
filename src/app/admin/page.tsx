@@ -40,13 +40,14 @@ const compressImage = (base64Str: string, maxWidth = 1200, maxHeight = 1200, qua
 };
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'unionMembers' | 'cases' | 'inquiries' | 'library' | 'announcements' | 'escortForms'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'unionMembers' | 'cases' | 'inquiries' | 'library' | 'announcements' | 'escortForms' | 'blog' | 'timebank'>('overview');
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [docTab, setDocTab] = useState<'cert' | 'health' | 'icDoc'>('cert');
   const [escortForms, setEscortForms] = useState<any[]>([]);
   const [selectedEscortForm, setSelectedEscortForm] = useState<any>(null);
   const [selectedUnionCard, setSelectedUnionCard] = useState<any>(null);
   const [selectedMockIC, setSelectedMockIC] = useState<any>(null);
+  const [timebankSubTab, setTimebankSubTab] = useState<'volunteers' | 'claims' | 'redemptions' | 'catalog'>('volunteers');
   
   // Vetting Registry States connected to Store
   const [pendingMembers, setPendingMembers] = useState<any[]>([]);
@@ -54,6 +55,32 @@ export default function AdminPage() {
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [libItems, setLibItems] = useState<any[]>([]);
   const [careRequests, setCareRequests] = useState<any[]>([]);
+
+  // Time Bank States
+  const [volunteers, setVolunteers] = useState<any[]>([]);
+  const [timebankServices, setTimebankServices] = useState<any[]>([]);
+  const [timebankRedemptions, setTimebankRedemptions] = useState<any[]>([]);
+  const [rewards, setRewards] = useState<any[]>([]);
+
+  // Reward Catalog Form States
+  const [showRewardForm, setShowRewardForm] = useState(false);
+  const [editRewardId, setEditRewardId] = useState<string | null>(null);
+  const [rewardTitle, setRewardTitle] = useState('');
+  const [rewardCost, setRewardCost] = useState<number>(10);
+  const [rewardCategory, setRewardCategory] = useState('Course');
+  const [rewardPartner, setRewardPartner] = useState('');
+  const [rewardDesc, setRewardDesc] = useState('');
+
+  // Blog & Stories States
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogCategory, setBlogCategory] = useState('Caregiver Stories');
+  const [blogAuthor, setBlogAuthor] = useState('MCSA Editorial');
+  const [blogCoverImage, setBlogCoverImage] = useState('');
+  const [blogReadTime, setBlogReadTime] = useState('5 min read');
+  const [blogContent, setBlogContent] = useState('');
+  const [editBlogId, setEditBlogId] = useState<string | null>(null);
+  const [showBlogForm, setShowBlogForm] = useState(false);
 
   const [newLibTitle, setNewLibTitle] = useState('');
   const [newLibType, setNewLibType] = useState('Image Map');
@@ -92,26 +119,44 @@ export default function AdminPage() {
   const [photoFileSize, setPhotoFileSize] = useState('');
 
   useEffect(() => {
-    setLang(store.getLanguage());
-    setPendingMembers(store.getPendingMembers());
-    setUnionMembers(store.getUnionMembers());
-    setInquiries(store.getInquiries());
-    setLibItems(store.getLibItems());
-    setAnnouncements(store.getAnnouncements());
-    setActivityPhotos(store.getActivityPhotos());
-    setEscortForms(store.getEscortForms());
-    setCareRequests(store.getCareRequests());
-    setCurrentStaffPassword(store.getStandardAdminPassword());
+    const initData = () => {
+      setLang(store.getLanguage());
+      setPendingMembers(store.getPendingMembers());
+      setUnionMembers(store.getUnionMembers());
+      setInquiries(store.getInquiries());
+      setLibItems(store.getLibItems());
+      setAnnouncements(store.getAnnouncements());
+      setActivityPhotos(store.getActivityPhotos());
+      setEscortForms(store.getEscortForms());
+      setCareRequests(store.getCareRequests());
+      setBlogPosts(store.getBlogPosts());
+      setVolunteers(store.getVolunteers());
+      setTimebankServices(store.getServiceRecords());
+      setTimebankRedemptions(store.getRedemptionRecords());
+      setRewards(store.getRewards());
+      setCurrentStaffPassword(store.getStandardAdminPassword());
 
-    const footerInfo = store.getFooterInfo();
-    if (footerInfo) {
-      setFooterAddress(footerInfo.address || 'KL Sentral Business Suites, Kuala Lumpur');
-      setFooterPhone(footerInfo.phone || '+60 3-2274 9988');
-      setFooterEmail(footerInfo.email || 'registry@mcsa.com.my');
-      setFooterDesc(footerInfo.desc || 'Accrediting and dispatching certified healthcare companions, confinement caregivers, and elder escorts across Malaysia.');
+      const footerInfo = store.getFooterInfo();
+      if (footerInfo) {
+        setFooterAddress(footerInfo.address || 'KL Sentral Business Suites, Kuala Lumpur');
+        setFooterPhone(footerInfo.phone || '+60 3-2274 9988');
+        setFooterEmail(footerInfo.email || 'registry@mcsa.com.my');
+        setFooterDesc(footerInfo.desc || 'Accrediting and dispatching certified healthcare companions, confinement caregivers, and elder escorts across Malaysia.');
+      }
+    };
+
+    initData();
+
+    // Pull fresh data from cloud in background and refresh UI states
+    store.pullFromCloud().then(() => {
+      initData();
+    }).catch((e) => console.error("Admin pull error:", e));
+
+    const loggedEmail = localStorage.getItem('mcsa_logged_admin_email');
+    if (!loggedEmail) {
+      window.location.href = '/admin-login';
+      return;
     }
-
-    const loggedEmail = localStorage.getItem('mcsa_logged_admin_email') || 'admin@mcsa.com.my';
     if (loggedEmail.toLowerCase().includes('staff') || loggedEmail.toLowerCase().includes('standard')) {
       setAdminRole('standard');
       setActiveTab('members');
@@ -141,6 +186,21 @@ export default function AdminPage() {
       }
       if (e.key === 'mcsa_care_requests') {
         setCareRequests(store.getCareRequests());
+      }
+      if (e.key === 'mcsa_blog_posts') {
+        setBlogPosts(store.getBlogPosts());
+      }
+      if (e.key === 'mcsa_volunteers' || e.key === 'mcsa_timebank_volunteers') {
+        setVolunteers(store.getVolunteers());
+      }
+      if (e.key === 'mcsa_service_records' || e.key === 'mcsa_timebank_service_records') {
+        setTimebankServices(store.getServiceRecords());
+      }
+      if (e.key === 'mcsa_redemption_records' || e.key === 'mcsa_timebank_redemption_records') {
+        setTimebankRedemptions(store.getRedemptionRecords());
+      }
+      if (e.key === 'mcsa_timebank_rewards') {
+        setRewards(store.getRewards());
       }
       if (e.key === 'mcsa_footer_info') {
         const info = store.getFooterInfo();
@@ -289,6 +349,189 @@ export default function AdminPage() {
     setPendingMembers(updatedPending);
     setSelectedMember(null);
     alert(`Rejected registration for ${name}. Notification sent.`);
+  };
+
+  const approveVolunteer = (id: string, name: string) => {
+    const updatedVols = volunteers.map((v: any) => 
+      v.id === id ? { ...v, status: 'Approved' } : v
+    );
+    try {
+      store.setVolunteers(updatedVols);
+      setVolunteers(updatedVols);
+      alert(`Volunteer application approved for ${name}!`);
+    } catch (err) {
+      alert('LocalStorage quota exceeded while saving volunteer approval.');
+    }
+  };
+
+  const rejectVolunteer = (id: string, name: string) => {
+    const updatedVols = volunteers.map((v: any) => 
+      v.id === id ? { ...v, status: 'Rejected' } : v
+    );
+    try {
+      store.setVolunteers(updatedVols);
+      setVolunteers(updatedVols);
+      alert(`Volunteer application declined for ${name}.`);
+    } catch (err) {
+      alert('LocalStorage quota exceeded.');
+    }
+  };
+
+  const approveServiceClaim = (claimId: string, email: string, hours: number, activity: string) => {
+    const updatedClaims = timebankServices.map((c: any) => 
+      c.id === claimId ? { ...c, status: 'Approved', approvedBy: 'MCSA Admin' } : c
+    );
+    
+    // Find volunteer and award credits
+    const updatedVols = volunteers.map((v: any) => {
+      if (v.email.toLowerCase().trim() === email.toLowerCase().trim()) {
+        const newCredits = (v.credits || 0) + hours;
+        let rank = v.rank || 'Bronze Companion';
+        const badges = [...(v.badges || [])];
+        if (newCredits >= 20 && !badges.includes('Community Pillar')) {
+          badges.push('Community Pillar');
+          rank = 'Gold Caregiver';
+        } else if (newCredits >= 10 && !badges.includes('Active Mind')) {
+          badges.push('Active Mind');
+          rank = 'Silver Companion';
+        }
+        return {
+          ...v,
+          credits: newCredits,
+          rank,
+          badges
+        };
+      }
+      return v;
+    });
+
+    // Create audit log
+    const newAudit = {
+      id: 'AUDIT-' + Date.now(),
+      volunteerEmail: email,
+      type: 'Earn',
+      amount: hours,
+      desc: `Approved claim for "${activity}"`,
+      date: new Date().toISOString()
+    };
+    
+    const allAudits = store.getAuditLogs();
+    const updatedAudits = [newAudit, ...allAudits];
+
+    try {
+      store.setServiceRecords(updatedClaims);
+      store.setVolunteers(updatedVols);
+      store.setAuditLogs(updatedAudits);
+      
+      setTimebankServices(updatedClaims);
+      setVolunteers(updatedVols);
+      alert(`Approved ${hours} hours for ${email}! Credits have been awarded.`);
+    } catch (err) {
+      alert('LocalStorage quota exceeded while approving claim.');
+    }
+  };
+
+  const rejectServiceClaim = (claimId: string, email: string) => {
+    const updatedClaims = timebankServices.map((c: any) => 
+      c.id === claimId ? { ...c, status: 'Rejected', approvedBy: 'MCSA Admin' } : c
+    );
+    try {
+      store.setServiceRecords(updatedClaims);
+      setTimebankServices(updatedClaims);
+      alert(`Rejected service claim for ${email}.`);
+    } catch (err) {
+      alert('LocalStorage quota exceeded.');
+    }
+  };
+
+  const completeRedemption = (redemptionId: string) => {
+    const updatedRedemptions = timebankRedemptions.map((r: any) => 
+      r.id === redemptionId ? { ...r, status: 'Completed/Delivered' } : r
+    );
+    try {
+      store.setRedemptionRecords(updatedRedemptions);
+      setTimebankRedemptions(updatedRedemptions);
+      alert('Redemption item marked as Completed & Delivered.');
+    } catch (err) {
+      alert('LocalStorage quota exceeded.');
+    }
+  };
+
+  const handleSaveReward = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rewardTitle || !rewardPartner) {
+      alert('Please fill out all required fields.');
+      return;
+    }
+
+    let updatedRewards;
+    if (editRewardId) {
+      // Edit existing reward
+      updatedRewards = rewards.map((r: any) =>
+        r.id === editRewardId
+          ? {
+              ...r,
+              title: rewardTitle,
+              cost: Number(rewardCost),
+              category: rewardCategory,
+              partner: rewardPartner,
+              desc: rewardDesc
+            }
+          : r
+      );
+      alert(`Successfully updated reward: ${rewardTitle}`);
+    } else {
+      // Add new reward
+      const newReward = {
+        id: `REWARD-${Date.now()}`,
+        title: rewardTitle,
+        cost: Number(rewardCost),
+        category: rewardCategory,
+        partner: rewardPartner,
+        desc: rewardDesc
+      };
+      updatedRewards = [...rewards, newReward];
+      alert(`Successfully added new reward: ${rewardTitle}`);
+    }
+
+    try {
+      store.setRewards(updatedRewards);
+      setRewards(updatedRewards);
+      // Reset form
+      setRewardTitle('');
+      setRewardCost(10);
+      setRewardCategory('Course');
+      setRewardPartner('');
+      setRewardDesc('');
+      setEditRewardId(null);
+      setShowRewardForm(false);
+    } catch (err) {
+      alert('LocalStorage quota exceeded while saving reward catalog.');
+    }
+  };
+
+  const handleEditReward = (reward: any) => {
+    setEditRewardId(reward.id);
+    setRewardTitle(reward.title);
+    setRewardCost(reward.cost);
+    setRewardCategory(reward.category);
+    setRewardPartner(reward.partner);
+    setRewardDesc(reward.desc || '');
+    setShowRewardForm(true);
+  };
+
+  const handleDeleteReward = (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}" from the catalog?`)) {
+      return;
+    }
+    const updatedRewards = rewards.filter((r: any) => r.id !== id);
+    try {
+      store.setRewards(updatedRewards);
+      setRewards(updatedRewards);
+      alert(`Successfully deleted reward: ${title}`);
+    } catch (err) {
+      alert('LocalStorage quota exceeded.');
+    }
   };
 
   const getValidityRange = (m: any) => {
@@ -643,6 +886,112 @@ export default function AdminPage() {
     alert('Activity photo removed.');
   };
 
+  const addOrUpdateBlogPost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!blogTitle.trim() || !blogContent.trim()) {
+      alert('Title and Content are required!');
+      return;
+    }
+
+    if (editBlogId) {
+      // Edit Mode
+      const updated = blogPosts.map((post) => {
+        if (post.id === editBlogId) {
+          return {
+            ...post,
+            title: blogTitle.trim(),
+            category: blogCategory,
+            author: blogAuthor.trim(),
+            coverImage: blogCoverImage.trim() || 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=600&h=400&fit=crop',
+            readTime: blogReadTime.trim(),
+            content: blogContent,
+            snippet: blogContent.split('\n').filter(p => p.trim() && !p.startsWith('#')).join(' ').substring(0, 160) + '...'
+          };
+        }
+        return post;
+      });
+      try {
+        store.setBlogPosts(updated);
+        setBlogPosts(updated);
+        alert('Blog post updated successfully!');
+        resetBlogForm();
+      } catch (err) {
+        alert('Failed to save changes. LocalStorage quota full!');
+      }
+    } else {
+      // Create Mode
+      const newPost = {
+        id: 'BLOG-' + Date.now(),
+        title: blogTitle.trim(),
+        category: blogCategory,
+        date: new Date().toISOString().split('T')[0],
+        readTime: blogReadTime.trim() || '5 min read',
+        author: blogAuthor.trim() || 'MCSA Editorial',
+        coverImage: blogCoverImage.trim() || 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=600&h=400&fit=crop',
+        snippet: blogContent.split('\n').filter(p => p.trim() && !p.startsWith('#')).join(' ').substring(0, 160) + '...',
+        content: blogContent
+      };
+      const updated = [newPost, ...blogPosts];
+      try {
+        store.setBlogPosts(updated);
+        setBlogPosts(updated);
+        alert('Blog post published successfully!');
+        resetBlogForm();
+      } catch (err) {
+        alert('Failed to publish. LocalStorage quota full!');
+      }
+    }
+  };
+
+  const deleteBlogPost = (id: string) => {
+    if (confirm('Are you sure you want to delete this blog post? This will unpublish it immediately.')) {
+      const updated = blogPosts.filter((post) => post.id !== id);
+      store.setBlogPosts(updated);
+      setBlogPosts(updated);
+      alert('Blog post deleted.');
+    }
+  };
+
+  const handleEditBlogPost = (post: any) => {
+    setEditBlogId(post.id);
+    setBlogTitle(post.title);
+    setBlogCategory(post.category);
+    setBlogAuthor(post.author);
+    setBlogCoverImage(post.coverImage);
+    setBlogReadTime(post.readTime);
+    setBlogContent(post.content);
+    setShowBlogForm(true);
+  };
+
+  const resetBlogForm = () => {
+    setEditBlogId(null);
+    setBlogTitle('');
+    setBlogCategory('Caregiver Stories');
+    setBlogAuthor('MCSA Editorial');
+    setBlogCoverImage('');
+    setBlogReadTime('5 min read');
+    setBlogContent('');
+    setShowBlogForm(false);
+  };
+
+  const handleBlogImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const originalBase64 = reader.result as string;
+      try {
+        const compressed = await compressImage(originalBase64, 800, 800, 0.75);
+        setBlogCoverImage(compressed);
+        alert(lang === 'zh' ? '照片上传并自动压缩成功！' : 'Photo uploaded and compressed successfully!');
+      } catch (err) {
+        setBlogCoverImage(originalBase64);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="app-container" style={{ background: 'var(--bg-main)' }}>
       {/* Sidebar with Glassmorphic design */}
@@ -747,6 +1096,24 @@ export default function AdminPage() {
               <User size={18} /> Patient Records
             </button>
           </li>
+          <li>
+            <button 
+              onClick={() => setActiveTab('blog')}
+              className={`sidebar-link ${activeTab === 'blog' ? 'active' : ''}`}
+              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+            >
+              <FileText size={18} /> Blog & News
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => setActiveTab('timebank')}
+              className={`sidebar-link ${activeTab === 'timebank' ? 'active' : ''}`}
+              style={{ background: 'none', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+            >
+              <Award size={18} /> Care Time Bank
+            </button>
+          </li>
           <li style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem' }}>
             <a 
               href="/" 
@@ -767,7 +1134,7 @@ export default function AdminPage() {
         
         {activeTab === 'overview' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Union Status & Operations Dashboard</h2>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)' }}>Union Status & Operations Dashboard</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Global summary metrics for 10,000+ active scale caregivers.</p>
 
             {/* Statistics */}
@@ -777,7 +1144,7 @@ export default function AdminPage() {
                   <Users size={32} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '2rem', margin: 0, color: '#ffffff' }}>10,240</h4>
+                  <h4 style={{ fontSize: '2rem', margin: 0, color: 'var(--text-light)' }}>10,240</h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>Registered Members</p>
                 </div>
               </div>
@@ -786,7 +1153,7 @@ export default function AdminPage() {
                   <Briefcase size={32} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '2rem', margin: 0, color: '#ffffff' }}>3,150</h4>
+                  <h4 style={{ fontSize: '2rem', margin: 0, color: 'var(--text-light)' }}>3,150</h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>Active Dispatches</p>
                 </div>
               </div>
@@ -795,7 +1162,7 @@ export default function AdminPage() {
                   <DollarSign size={32} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '2rem', margin: 0, color: '#ffffff' }}>RM 358.4K</h4>
+                  <h4 style={{ fontSize: '2rem', margin: 0, color: 'var(--text-light)' }}>RM 358.4K</h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>License Revenues</p>
                 </div>
               </div>
@@ -991,8 +1358,15 @@ export default function AdminPage() {
               <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>Union Membership Registry Vetting</h2>
               <button 
                 onClick={() => { 
-                  setPendingMembers(store.getPendingMembers()); 
-                  alert('Vetting queue refreshed! / 申请列表已刷新！'); 
+                  store.pullFromCloud()
+                    .then(() => {
+                      setPendingMembers(store.getPendingMembers()); 
+                      alert('Vetting queue refreshed from cloud! / 申请列表已同步刷新！'); 
+                    })
+                    .catch((err) => {
+                      setPendingMembers(store.getPendingMembers());
+                      alert('Local refresh complete / 本地列表已刷新');
+                    });
                 }} 
                 className="btn btn-outline" 
                 style={{ 
@@ -1086,8 +1460,15 @@ export default function AdminPage() {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button 
                   onClick={() => { 
-                    setUnionMembers(store.getUnionMembers()); 
-                    alert('Union member list refreshed! / 盟友花名册已刷新！'); 
+                    store.pullFromCloud()
+                      .then(() => {
+                        setUnionMembers(store.getUnionMembers()); 
+                        alert('Union member list refreshed from cloud! / 盟友花名册已同步刷新！'); 
+                      })
+                      .catch((err) => {
+                        setUnionMembers(store.getUnionMembers());
+                        alert('Local refresh complete / 本地名册已刷新');
+                      });
                   }} 
                   className="btn btn-outline" 
                   style={{ 
@@ -1166,13 +1547,14 @@ export default function AdminPage() {
                           <th>Contact details</th>
                           <th>Primary Location</th>
                           <th>Membership Validity</th>
+                          <th>Guild Contribution / 公会奉献</th>
                           <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredMembers.length === 0 ? (
                           <tr>
-                            <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                            <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                               ❌ No matching members found. / 未找到符合条件的会员记录。
                             </td>
                           </tr>
@@ -1224,6 +1606,46 @@ export default function AdminPage() {
                                 <span style={{ fontSize: '0.82rem', color: '#cbd5e1', whiteSpace: 'nowrap' }}>
                                   📅 {getValidityRange(m)}
                                 </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', minWidth: '150px' }}>
+                                  <select
+                                    value={m.contributionCompliance !== undefined ? m.contributionCompliance : 100}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10);
+                                      const updated = unionMembers.map((item: any) => {
+                                        if (item.id === m.id) {
+                                          return { ...item, contributionCompliance: val };
+                                        }
+                                        return item;
+                                      });
+                                      store.setUnionMembers(updated);
+                                      setUnionMembers(updated);
+                                    }}
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      fontSize: '0.78rem',
+                                      borderRadius: '6px',
+                                      background: 'var(--bg-input)',
+                                      color: 'var(--text-light)',
+                                      border: '1px solid var(--border)',
+                                      cursor: 'pointer',
+                                      outline: 'none'
+                                    }}
+                                  >
+                                    <option value={100}>100% Compliant / 奉献达标</option>
+                                    <option value={80}>80% Standard / 奉献良好</option>
+                                    <option value={50}>50% Low / 贡献偏低</option>
+                                    <option value={0}>0% None / 零贡献</option>
+                                  </select>
+                                  {(() => {
+                                    const comp = m.contributionCompliance !== undefined ? m.contributionCompliance : 100;
+                                    if (comp >= 90) return <span style={{ fontSize: '0.7rem', color: 'var(--health)', fontWeight: 'bold' }}>⚡ High Priority / 优先派单</span>;
+                                    if (comp >= 50) return <span style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 'bold' }}>✔️ Standard / 正常派单</span>;
+                                    if (comp > 0) return <span style={{ fontSize: '0.7rem', color: 'var(--warning)', fontWeight: 'bold' }}>⚠️ Low / 限流派单</span>;
+                                    return <span style={{ fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 'bold' }}>🚫 Restricted / 限制派单</span>;
+                                  })()}
+                                </div>
                               </td>
                               <td>
                                 <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -1286,38 +1708,38 @@ export default function AdminPage() {
 
         {activeTab === 'cases' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Match Dispatch & Case Assignments / 智能匹配与派单管理</h2>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)' }}>Match Dispatch & Case Assignments / 智能匹配与派单管理</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>Match incoming case requests to vetted, verified caregivers.</p>
 
             <div className="grid-cols-2">
               <div className="card">
-                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem', color: '#ffffff' }}>Active Dispatched Assignments / 现役已派单订单</h3>
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '1.2rem', color: 'var(--text-light)' }}>Active Dispatched Assignments / 现役已派单订单</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                   {/* Default mock assignments */}
-                  <div style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'rgba(30,41,59,0.5)' }}>
+                  <div style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'var(--primary-light)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                      <strong style={{ color: '#ffffff', fontSize: '1.05rem' }}>Grandpa Zhang (Chronic Care)</strong>
+                      <strong style={{ color: 'var(--text-light)', fontSize: '1.05rem' }}>Grandpa Zhang (Chronic Care)</strong>
                       <span className="badge badge-active">Active Shift</span>
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Assigned Caregiver: Li Xiulan (MCSA-2026-0009)</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0 }}>Assigned Caregiver: Li Xiulan (MCSA-2026-0009)</p>
                   </div>
-                  <div style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'rgba(30,41,59,0.5)' }}>
+                  <div style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'var(--primary-light)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                      <strong style={{ color: '#ffffff', fontSize: '1.05rem' }}>Baby Wang & Mom (Confinement)</strong>
+                      <strong style={{ color: 'var(--text-light)', fontSize: '1.05rem' }}>Baby Wang & Mom (Confinement)</strong>
                       <span className="badge badge-active">Active Shift</span>
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Assigned Caregiver: Meizhen Chen (MCSA-2026-1112)</p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0 }}>Assigned Caregiver: Meizhen Chen (MCSA-2026-1112)</p>
                   </div>
 
                   {/* Dynamically assigned assignments */}
                   {careRequests.filter((r: any) => r.status === 'accepted').map((r: any) => (
-                    <div key={r.id} style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'rgba(30, 41, 59, 0.5)' }}>
+                    <div key={r.id} style={{ border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px', background: 'var(--primary-light)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
-                        <strong style={{ color: '#ffffff', fontSize: '1.05rem' }}>{r.name} ({r.category})</strong>
+                        <strong style={{ color: 'var(--text-light)', fontSize: '1.05rem' }}>{r.name} ({r.category})</strong>
                         <span className="badge badge-active">Active Shift</span>
                       </div>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Assigned Caregiver: {r.assignedCaregiver || 'Vetted Caregiver'}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', margin: '0.25rem 0 0 0' }}>Location: {r.location || 'Kuala Lumpur'} | Date: {r.date}</p>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0 }}>Assigned Caregiver: {r.assignedCaregiver || 'Vetted Caregiver'}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>Location: {r.location || 'Kuala Lumpur'} | Date: {r.date}</p>
                     </div>
                   ))}
                 </div>
@@ -1325,7 +1747,7 @@ export default function AdminPage() {
 
               <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem', color: '#ffffff' }}>Smart Match Suggestion Engine / 智能配单推荐系统</h3>
+                  <h3 style={{ marginBottom: '0.75rem', fontSize: '1.2rem', color: 'var(--text-light)' }}>Smart Match Suggestion Engine / 智能配单推荐系统</h3>
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 1.5rem 0' }}>
                     Execute matching algorithms factoring in hospital coordinates, caregiver specialized categories, and clinical ratings.
                   </p>
@@ -1335,7 +1757,7 @@ export default function AdminPage() {
                     const pendingRequests = careRequests.filter((r: any) => r.status !== 'accepted');
                     if (pendingRequests.length === 0) {
                       return (
-                        <div style={{ padding: '2rem', textAlign: 'center', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                        <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-input)', borderRadius: '12px', border: '1px dashed var(--border)' }}>
                           <span style={{ fontSize: '2rem' }}>🎉</span>
                           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>
                             All dispatches assigned! / 所有需求均已分发。
@@ -1347,7 +1769,7 @@ export default function AdminPage() {
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div className="form-group" style={{ margin: 0 }}>
-                          <label className="form-label" style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>
+                          <label className="form-label" style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
                             Select Pending Client Request / 选择待派单的客户需求：
                           </label>
                           <select
@@ -1357,7 +1779,7 @@ export default function AdminPage() {
                               setSelectedMatchRequestId(e.target.value);
                               setShowMatchResults(false);
                             }}
-                            style={{ height: '42px', fontSize: '0.88rem', background: '#334155', color: '#fff', cursor: 'pointer' }}
+                            style={{ height: '42px', fontSize: '0.88rem', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)', cursor: 'pointer' }}
                           >
                             <option value="">-- Choose pending request / 请选择需求 --</option>
                             {pendingRequests.map((r: any) => (
@@ -1372,7 +1794,7 @@ export default function AdminPage() {
                           const selectedReq = pendingRequests.find(r => r.id === selectedMatchRequestId);
                           if (!selectedReq) return null;
                           return (
-                            <div style={{ padding: '1rem', background: 'rgba(15, 23, 42, 0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.85rem', color: '#cbd5e1' }}>
+                            <div style={{ padding: '1rem', background: 'var(--primary-light)', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-light)' }}>
                               <p style={{ margin: '0 0 0.5rem 0' }}>📝 <strong>Client Needs:</strong> {selectedReq.message}</p>
                               <p style={{ margin: 0 }}>📅 <strong>Requested Date:</strong> {selectedReq.date || '2026-06-05'}</p>
                             </div>
@@ -1425,10 +1847,19 @@ export default function AdminPage() {
                     const mLocation = (m.location || 'KL').toLowerCase();
                     const locMatch = reqLocation.includes(mLocation) || mLocation.includes(reqLocation) || req.message.toLowerCase().includes(mLocation.split(',')[0].trim());
 
+                    const comp = m.contributionCompliance !== undefined ? m.contributionCompliance : 100;
+                    let contributionBonus = 0;
+                    if (comp >= 90) contributionBonus = 15;
+                    else if (comp >= 50) contributionBonus = 0;
+                    else if (comp > 0) contributionBonus = -30;
+                    else contributionBonus = -50;
+
                     let score = 50;
                     if (catMatch) score += 30;
                     if (locMatch) score += 15;
                     score += Math.round((details.rating - 4.0) * 6);
+                    score += contributionBonus;
+                    if (score < 10) score = 10;
                     if (score > 98) score = 98; // maximum match score representation
 
                     return {
@@ -1441,8 +1872,8 @@ export default function AdminPage() {
                   }).sort((a, b) => b.score - a.score);
 
                   return (
-                    <div className="animate-fade-in" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem' }}>
-                      <h4 style={{ color: '#ffffff', margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800 }}>
+                    <div className="animate-fade-in" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                      <h4 style={{ color: 'var(--text-light)', margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 800 }}>
                         📊 Top Matches for {req.name} (最佳推荐看护人列表)
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1452,8 +1883,8 @@ export default function AdminPage() {
                             style={{ 
                               padding: '1rem', 
                               borderRadius: '12px', 
-                              background: 'rgba(255,255,255,0.02)', 
-                              border: `1.5px solid ${rec.score >= 85 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.04)'}`,
+                              background: 'var(--bg-input)', 
+                              border: `1.5px solid ${rec.score >= 85 ? 'rgba(16, 185, 129, 0.3)' : 'var(--border)'}`,
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '0.75rem'
@@ -1465,9 +1896,18 @@ export default function AdminPage() {
                                   <img src={rec.caregiver.photo} alt={rec.caregiver.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                                 <div>
-                                  <strong style={{ color: '#ffffff', fontSize: '0.92rem' }}>{rec.caregiver.name}</strong>
+                                  <strong style={{ color: 'var(--text-light)', fontSize: '0.92rem' }}>{rec.caregiver.name}</strong>
                                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                                     {rec.caregiver.category} ({rec.caregiver.exp} exp)
+                                  </div>
+                                  <div style={{ fontSize: '0.7rem', marginTop: '0.15rem' }}>
+                                    {(() => {
+                                      const comp = rec.caregiver.contributionCompliance !== undefined ? rec.caregiver.contributionCompliance : 100;
+                                      if (comp >= 90) return <span style={{ color: 'var(--health)', fontWeight: 'bold' }}>⭐ Guild Contributor ({comp}%)</span>;
+                                      if (comp >= 50) return <span style={{ color: 'var(--accent)' }}>✔️ Standard Dues ({comp}%)</span>;
+                                      if (comp > 0) return <span style={{ color: 'var(--warning)', fontWeight: 'bold' }}>⚠️ Low Dues ({comp}%) - Throttled</span>;
+                                      return <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>🚫 Restricted ({comp}%) - Throttled</span>;
+                                    })()}
                                   </div>
                                 </div>
                               </div>
@@ -1476,9 +1916,9 @@ export default function AdminPage() {
                                 style={{ 
                                   fontSize: '0.68rem', 
                                   padding: '0.15rem 0.5rem', 
-                                  backgroundColor: rec.score >= 85 ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
+                                  backgroundColor: rec.score >= 85 ? 'rgba(16,185,129,0.1)' : 'var(--bg-card)',
                                   color: rec.score >= 85 ? 'var(--health)' : 'var(--text-muted)',
-                                  border: rec.score >= 85 ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255,255,255,0.05)'
+                                  border: rec.score >= 85 ? '1px solid rgba(16,185,129,0.2)' : '1px solid var(--border)'
                                 }}
                               >
                                 {rec.score}% Match
@@ -1486,10 +1926,10 @@ export default function AdminPage() {
                             </div>
 
                             {/* Ratings & Matching Criteria Display */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'var(--primary-light)', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                                 <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>
-                                  {rec.details.stars} <span style={{ color: '#ffffff', fontSize: '0.75rem' }}>{rec.details.rating}</span>
+                                  {rec.details.stars} <span style={{ color: 'var(--text-main)', fontSize: '0.75rem' }}>{rec.details.rating}</span>
                                 </span>
                                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                   {rec.details.reviews} clinical reviews / 临床评价
@@ -2054,7 +2494,7 @@ export default function AdminPage() {
 
         {activeTab === 'escortForms' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Patient Profiles & Escort Agreements / 病人记录与服务协议</h2>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)' }}>Patient Profiles & Escort Agreements / 病人记录与服务协议</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.95rem' }}>View patient information sheets, health history profiles, and medical escort agreements.</p>
 
             {selectedEscortForm ? (
@@ -2258,7 +2698,7 @@ export default function AdminPage() {
                     {escortForms.map((f: any) => (
                       <tr key={f.id}>
                         <td>
-                          <strong style={{ color: '#ffffff' }}>{f.fullName}</strong>
+                          <strong style={{ color: 'var(--text-light)' }}>{f.fullName}</strong>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.gender} &bull; {f.nric}</div>
                         </td>
                         <td>
@@ -2267,7 +2707,7 @@ export default function AdminPage() {
                             const found = members.find((m: any) => m.id === f.caregiverId || m.member_number === f.caregiverId || m.name.toLowerCase().includes(String(f.caregiverId || '').toLowerCase()));
                             return found ? (
                               <div>
-                                <strong style={{ color: '#ffffff' }}>{found.name}</strong>
+                                <strong style={{ color: 'var(--text-light)' }}>{found.name}</strong>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>ID: {found.member_number}</div>
                               </div>
                             ) : (
@@ -2276,15 +2716,15 @@ export default function AdminPage() {
                           })()}
                         </td>
                         <td>
-                          <span style={{ color: '#ffffff', fontWeight: 600 }}>{f.appointmentDate}</span>
+                          <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{f.appointmentDate}</span>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>🕒 {f.appointmentTime}</div>
                         </td>
                         <td>
-                          <span style={{ color: '#ffffff' }}>{f.facility}</span>
+                          <span style={{ color: 'var(--text-main)' }}>{f.facility}</span>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.specialty} ({f.doctor || 'N/A'})</div>
                         </td>
                         <td>
-                          <span style={{ color: '#ffffff' }}>{f.emergencyName}</span>
+                          <span style={{ color: 'var(--text-main)' }}>{f.emergencyName}</span>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>📞 {f.emergencyPhone} ({f.relationship})</div>
                         </td>
                         <td>
@@ -2305,7 +2745,1140 @@ export default function AdminPage() {
           </div>
         )}
 
+        {activeTab === 'blog' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+              <div>
+                <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)' }}>
+                  📰 Blog & Caregiver Stories Manager / 博客故事与新闻管理
+                </h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
+                  Publish stories of certified caregivers, accreditation highlights, and standard health guide SOPs to show public transparency.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  resetBlogForm();
+                  setShowBlogForm(true);
+                }}
+                className="btn btn-primary"
+                style={{
+                  background: 'var(--primary)',
+                  boxShadow: '0 4px 12px var(--primary-glow)',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.65rem 1.25rem'
+                }}
+              >
+                ➕ Write New Article / 发布新文章
+              </button>
+            </div>
+
+            {/* Articles Table Card */}
+            <div className="card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+              <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem' }}>Cover</th>
+                    <th style={{ padding: '0.75rem' }}>Title & Category</th>
+                    <th style={{ padding: '0.75rem' }}>Author & Date</th>
+                    <th style={{ padding: '0.75rem' }}>Read Time</th>
+                    <th style={{ padding: '0.75rem' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    if (blogPosts.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                            No blog posts published yet. Click "Write New Article" to get started!
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return blogPosts.map((post) => (
+                      <tr key={post.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '0.75rem' }}>
+                          <img
+                            src={post.coverImage || 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=600&h=400&fit=crop'}
+                            alt={post.title}
+                            style={{ width: '80px', height: '50px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border)' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.75rem', maxWidth: '350px' }}>
+                          <div style={{ fontWeight: 'bold', color: 'var(--text-light)', fontSize: '0.92rem', marginBottom: '0.35rem', lineHeight: '1.4' }}>
+                            {post.title}
+                          </div>
+                          <span className="badge badge-active" style={{
+                            fontSize: '0.7rem',
+                            padding: '0.2rem 0.5rem',
+                            backgroundColor: post.category === 'Caregiver Stories' ? 'rgba(16, 185, 129, 0.1)' : post.category === 'Accreditation News' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                            color: post.category === 'Caregiver Stories' ? 'var(--health)' : post.category === 'Accreditation News' ? 'var(--primary)' : 'var(--accent)',
+                            border: '1px solid transparent'
+                          }}>
+                            {post.category}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 500 }}>{post.author}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>📅 {post.date}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>{post.readTime}</span>
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => handleEditBlogPost(post)}
+                              className="btn btn-outline"
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => deleteBlogPost(post.id)}
+                              className="btn btn-outline"
+                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Form Overlay */}
+            {showBlogForm && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                backgroundColor: 'rgba(11, 19, 41, 0.8)',
+                backdropFilter: 'blur(12px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999
+              }}>
+                <div style={{
+                  backgroundColor: 'var(--bg-card)',
+                  width: '92%',
+                  maxWidth: '960px',
+                  maxHeight: '90vh',
+                  borderRadius: '24px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border)'
+                }}>
+                  {/* Modal Header */}
+                  <div style={{
+                    padding: '1.25rem 2rem',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: 'var(--bg-sidebar)',
+                    color: '#ffffff'
+                  }}>
+                    <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                      {editBlogId ? '✏️ Edit Blog & Story Post' : '📰 Publish New Story / News'}
+                    </h3>
+                    <button 
+                      onClick={resetBlogForm}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: 'none',
+                        color: '#ffffff',
+                        borderRadius: '50%',
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Modal Scroll Content */}
+                  <form onSubmit={addOrUpdateBlogPost} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                    <div style={{ overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                        {/* Left side: fields */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600 }}>Article Title / 文章标题</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Caregiver Journey: Making Home Vitals Safe"
+                              className="form-input"
+                              value={blogTitle}
+                              onChange={(e) => setBlogTitle(e.target.value)}
+                              style={{ height: '42px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                            />
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600 }}>Category / 分类</label>
+                              <select
+                                className="form-input"
+                                value={blogCategory}
+                                onChange={(e) => setBlogCategory(e.target.value)}
+                                style={{ height: '42px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                              >
+                                <option value="Caregiver Stories">Caregiver Stories</option>
+                                <option value="Accreditation News">Accreditation News</option>
+                                <option value="Health Tips">Health Tips</option>
+                              </select>
+                            </div>
+
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600 }}>Read Time / 阅读时长</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. 5 min read"
+                                className="form-input"
+                                value={blogReadTime}
+                                onChange={(e) => setBlogReadTime(e.target.value)}
+                                style={{ height: '42px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600 }}>Author / 作者</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. MCSA Editorial"
+                                className="form-input"
+                                value={blogAuthor}
+                                onChange={(e) => setBlogAuthor(e.target.value)}
+                                style={{ height: '42px', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                              />
+                            </div>
+
+                             <div className="form-group" style={{ margin: 0 }}>
+                              <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600 }}>Cover Image / 封面图片 (URL / Upload)</label>
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Paste image URL or upload file..."
+                                  className="form-input"
+                                  value={blogCoverImage}
+                                  onChange={(e) => setBlogCoverImage(e.target.value)}
+                                  style={{ height: '42px', flex: 1, background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                                />
+                                <label
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '42px',
+                                    padding: '0 1rem',
+                                    background: 'var(--primary-glow)',
+                                    color: 'var(--primary)',
+                                    borderRadius: '8px',
+                                    fontWeight: 700,
+                                    fontSize: '0.82rem',
+                                    cursor: 'pointer',
+                                    border: '1.5px solid var(--primary)',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  📷 {lang === 'zh' ? '上传照片' : 'Upload'}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleBlogImageUpload}
+                                    style={{ display: 'none' }}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Cover Presets */}
+                          <div>
+                            <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '0.5rem' }}>Select Preset Cover / 精选封面库</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                              {[
+                                {
+                                  name: 'Elderly Care',
+                                  url: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?q=80&w=600&h=400&fit=crop',
+                                  desc: 'Seniors, physical rehab'
+                                },
+                                {
+                                  name: 'Confinement Care',
+                                  url: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?q=80&w=600&h=400&fit=crop',
+                                  desc: 'Newborns, lactation, postpartum'
+                                },
+                                {
+                                  name: 'Patient Companion',
+                                  url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&h=400&fit=crop',
+                                  desc: 'Hospital escorting, clinics'
+                                },
+                                {
+                                  name: 'Vetting & Exams',
+                                  url: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?q=80&w=600&h=400&fit=crop',
+                                  desc: 'Accreditation, safety checks'
+                                },
+                                {
+                                  name: 'Babysitter & Mother',
+                                  url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&h=400&fit=crop',
+                                  desc: 'Infant care, parenting'
+                                }
+                              ].map((preset) => (
+                                <button
+                                  key={preset.url}
+                                  type="button"
+                                  onClick={() => setBlogCoverImage(preset.url)}
+                                  style={{
+                                    border: blogCoverImage === preset.url ? '2px solid var(--primary)' : '1px solid var(--border)',
+                                    borderRadius: '10px',
+                                    overflow: 'hidden',
+                                    background: blogCoverImage === preset.url ? 'var(--primary-glow)' : 'var(--bg-card)',
+                                    padding: '6px 12px',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    width: '100%',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                >
+                                  <img src={preset.url} alt={preset.name} style={{ width: '45px', height: '35px', objectFit: 'cover', borderRadius: '4px' }} />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '0.78rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{preset.name}</div>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{preset.desc}</div>
+                                  </div>
+                                  {blogCoverImage === preset.url && (
+                                    <span style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>✓</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side: content */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                          <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column', flex: 1 }}>
+                            <label className="form-label" style={{ color: 'var(--text-main)', fontWeight: 600 }}>Article Body Content / 文章正文</label>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                              💡 Use double enter/line breaks to separate paragraphs. Use <code>## Heading 2</code> or <code>### Heading 3</code> for subsections.
+                            </div>
+                            <textarea
+                              required
+                              placeholder="Start writing the story or news article here..."
+                              className="form-input"
+                              value={blogContent}
+                              onChange={(e) => setBlogContent(e.target.value)}
+                              style={{ flex: 1, minHeight: '320px', resize: 'vertical', padding: '12px', fontSize: '0.9rem', lineHeight: '1.5', fontFamily: 'inherit', background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div style={{
+                      padding: '1.25rem 2rem',
+                      borderTop: '1px solid var(--border)',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      gap: '0.75rem',
+                      backgroundColor: 'var(--bg-sidebar)'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={resetBlogForm}
+                        className="btn btn-outline"
+                        style={{ minWidth: '100px', borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
+                      >
+                        Cancel / 取消
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{
+                          minWidth: '150px',
+                          background: 'var(--primary)',
+                          boxShadow: '0 4px 12px var(--primary-glow)'
+                        }}
+                      >
+                        {editBlogId ? 'Save Changes / 保存修改' : 'Publish / 发布文章'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'timebank' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+              <div>
+                <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)' }}>
+                  ⏱️ Care Time Bank (关爱时间银行) Manager
+                </h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
+                  Manage community volunteers, approve service hours, and process time-credit reward redemptions.
+                </p>
+              </div>
+            </div>
+
+            {/* Aggregate Statistics Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Active Volunteers / 活跃义工人数</span>
+                <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-light)', fontFamily: 'Outfit, sans-serif' }}>
+                  {volunteers.filter(v => v.status === 'Approved').length}
+                </span>
+              </div>
+              
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Pending Applications / 待审核义工</span>
+                <span style={{ fontSize: '2rem', fontWeight: 800, color: volunteers.filter(v => v.status === 'Pending').length > 0 ? 'var(--accent)' : 'var(--text-light)', fontFamily: 'Outfit, sans-serif' }}>
+                  {volunteers.filter(v => v.status === 'Pending').length}
+                </span>
+              </div>
+
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Pending Claims / 待审核工时</span>
+                <span style={{ fontSize: '2rem', fontWeight: 800, color: timebankServices.filter(c => c.status === 'Pending').length > 0 ? 'var(--accent)' : 'var(--text-light)', fontFamily: 'Outfit, sans-serif' }}>
+                  {timebankServices.filter(c => c.status === 'Pending').length}
+                </span>
+              </div>
+
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Service Hours / 累计贡献工时</span>
+                <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--health)', fontFamily: 'Outfit, sans-serif' }}>
+                  {timebankServices.filter(c => c.status === 'Approved').reduce((acc, curr) => acc + (curr.hours || 0), 0)} H
+                </span>
+              </div>
+            </div>
+
+            {/* Subtab Navigation */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '2rem' }}>
+              <button
+                onClick={() => setTimebankSubTab('volunteers')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  fontSize: '0.88rem',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: timebankSubTab === 'volunteers' ? 'var(--primary)' : 'transparent',
+                  color: timebankSubTab === 'volunteers' ? '#ffffff' : 'var(--text-muted)',
+                  boxShadow: timebankSubTab === 'volunteers' ? '0 4px 12px var(--primary-glow)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                👥 Volunteers / 义工审核与名册
+              </button>
+              <button
+                onClick={() => setTimebankSubTab('claims')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  fontSize: '0.88rem',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: timebankSubTab === 'claims' ? 'var(--primary)' : 'transparent',
+                  color: timebankSubTab === 'claims' ? '#ffffff' : 'var(--text-muted)',
+                  boxShadow: timebankSubTab === 'claims' ? '0 4px 12px var(--primary-glow)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                ⏱️ Hours Claims / 工时审核 {timebankServices.filter(c => c.status === 'Pending').length > 0 && `(${timebankServices.filter(c => c.status === 'Pending').length})`}
+              </button>
+              <button
+                onClick={() => setTimebankSubTab('redemptions')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  fontSize: '0.88rem',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: timebankSubTab === 'redemptions' ? 'var(--primary)' : 'transparent',
+                  color: timebankSubTab === 'redemptions' ? '#ffffff' : 'var(--text-muted)',
+                  boxShadow: timebankSubTab === 'redemptions' ? '0 4px 12px var(--primary-glow)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🎁 Redemptions / 礼品兑换审核 {timebankRedemptions.filter(r => r.status === 'Pending').length > 0 && `(${timebankRedemptions.filter(r => r.status === 'Pending').length})`}
+              </button>
+              <button
+                onClick={() => setTimebankSubTab('catalog')}
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  fontSize: '0.88rem',
+                  fontWeight: 'bold',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: timebankSubTab === 'catalog' ? 'var(--primary)' : 'transparent',
+                  color: timebankSubTab === 'catalog' ? '#ffffff' : 'var(--text-muted)',
+                  boxShadow: timebankSubTab === 'catalog' ? '0 4px 12px var(--primary-glow)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🛍️ Reward Catalog / 礼品库管理
+              </button>
+            </div>
+
+            {/* Subtab Contents */}
+            {timebankSubTab === 'volunteers' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                {/* Vetting Applications */}
+                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                    📋 Pending Volunteer Applications / 待审核义工申请
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '0.75rem' }}>Applicant Name</th>
+                          <th style={{ padding: '0.75rem' }}>Contact Details</th>
+                          <th style={{ padding: '0.75rem' }}>NRIC</th>
+                          <th style={{ padding: '0.75rem' }}>Interests / Skills</th>
+                          <th style={{ padding: '0.75rem' }}>Applied Date</th>
+                          <th style={{ padding: '0.75rem' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {volunteers.filter(v => v.status === 'Pending').length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              No pending applications. / 暂无待审核申请
+                            </td>
+                          </tr>
+                        ) : (
+                          volunteers.filter(v => v.status === 'Pending').map((v) => (
+                            <tr key={v.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: 600, color: 'var(--text-light)' }}>{v.name}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ color: 'var(--text-main)' }}>{v.email}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{v.phone}</div>
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-main)' }}>{v.nric}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                  {v.categories?.map((cat: string) => (
+                                    <span key={cat} style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', background: 'var(--primary-glow)', color: 'var(--primary)', borderRadius: '4px', fontWeight: 600 }}>
+                                      {cat}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{v.joinedDate}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button
+                                    onClick={() => approveVolunteer(v.id, v.name)}
+                                    className="btn btn-primary"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', background: 'var(--health)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    onClick={() => rejectVolunteer(v.id, v.name)}
+                                    className="btn btn-outline"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent', cursor: 'pointer' }}
+                                  >
+                                    ✗ Decline
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Approved Roster */}
+                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                    👥 Active Volunteers Roster / 义工名册
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '0.75rem' }}>Volunteer</th>
+                          <th style={{ padding: '0.75rem' }}>Contact Info</th>
+                          <th style={{ padding: '0.75rem' }}>Credits / 积分</th>
+                          <th style={{ padding: '0.75rem' }}>Rank / 等级</th>
+                          <th style={{ padding: '0.75rem' }}>Badges / 勋章</th>
+                          <th style={{ padding: '0.75rem' }}>Joined Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {volunteers.filter(v => v.status === 'Approved').length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              No active volunteers. / 暂无激活义工
+                            </td>
+                          </tr>
+                        ) : (
+                          volunteers.filter(v => v.status === 'Approved').map((v) => (
+                            <tr key={v.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: 600, color: 'var(--text-light)' }}>{v.name}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ color: 'var(--text-main)' }}>{v.email}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{v.phone}</div>
+                              </td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--primary)' }}>{v.credits || 0}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.2rem' }}>credits</span>
+                              </td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{
+                                  fontSize: '0.75rem',
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '6px',
+                                  fontWeight: 700,
+                                  background: v.rank?.includes('Gold') ? 'var(--accent-glow)' : v.rank?.includes('Silver') ? 'rgba(100,116,139,0.1)' : 'rgba(180,83,9,0.05)',
+                                  color: v.rank?.includes('Gold') ? 'var(--accent-dark)' : v.rank?.includes('Silver') ? '#334155' : 'var(--accent)'
+                                }}>
+                                  🏆 {v.rank}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                  {v.badges?.map((badge: string) => (
+                                    <span key={badge} style={{ fontSize: '0.7rem', padding: '0.15rem 0.40rem', background: 'var(--bg-input)', color: 'var(--text-main)', borderRadius: '4px', border: '1px solid var(--border)' }}>
+                                      🎖️ {badge}
+                                    </span>
+                                  ))}
+                                  {(!v.badges || v.badges.length === 0) && <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>None</span>}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{v.joinedDate}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {timebankSubTab === 'claims' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                {/* Pending Claims */}
+                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                    📋 Pending Service Hours Claims / 待审核服务工时申报
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '0.75rem' }}>Volunteer</th>
+                          <th style={{ padding: '0.75rem' }}>Activity</th>
+                          <th style={{ padding: '0.75rem' }}>Hours</th>
+                          <th style={{ padding: '0.75rem' }}>Service Date</th>
+                          <th style={{ padding: '0.75rem' }}>Description & Proof</th>
+                          <th style={{ padding: '0.75rem' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {timebankServices.filter(c => c.status === 'Pending').length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              No pending claims to approve. / 暂无待审核申报
+                            </td>
+                          </tr>
+                        ) : (
+                          timebankServices.filter(c => c.status === 'Pending').map((c) => (
+                            <tr key={c.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-light)' }}>{c.volunteerName}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.volunteerEmail}</div>
+                              </td>
+                              <td style={{ padding: '0.75rem', fontWeight: 500, color: 'var(--text-light)' }}>{c.activity}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)' }}>{c.hours}</span> H
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-main)' }}>{c.date}</td>
+                              <td style={{ padding: '0.75rem', maxWidth: '300px', color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: '1.4' }}>{c.desc}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button
+                                    onClick={() => approveServiceClaim(c.id, c.volunteerEmail, c.hours, c.activity)}
+                                    className="btn btn-primary"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', background: 'var(--health)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    onClick={() => rejectServiceClaim(c.id, c.volunteerEmail)}
+                                    className="btn btn-outline"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent', cursor: 'pointer' }}
+                                  >
+                                    ✗ Reject
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Claims History */}
+                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                    ⏱️ Claims History Log / 工时申报记录历史
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '0.75rem' }}>Volunteer</th>
+                          <th style={{ padding: '0.75rem' }}>Activity</th>
+                          <th style={{ padding: '0.75rem' }}>Hours</th>
+                          <th style={{ padding: '0.75rem' }}>Date</th>
+                          <th style={{ padding: '0.75rem' }}>Status</th>
+                          <th style={{ padding: '0.75rem' }}>Handled By</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {timebankServices.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              No service records found. / 暂无服务申报记录
+                            </td>
+                          </tr>
+                        ) : (
+                          timebankServices.map((c) => (
+                            <tr key={c.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-light)' }}>{c.volunteerName}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.volunteerEmail}</div>
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-main)' }}>{c.activity}</td>
+                              <td style={{ padding: '0.75rem', fontWeight: 600 }}>{c.hours} H</td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{c.date}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{
+                                  fontSize: '0.75rem',
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '6px',
+                                  fontWeight: 700,
+                                  background: c.status === 'Approved' ? 'var(--health-glow)' : c.status === 'Rejected' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+                                  color: c.status === 'Approved' ? 'var(--health-dark)' : c.status === 'Rejected' ? 'var(--danger)' : 'var(--accent-dark)'
+                                }}>
+                                  {c.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{c.approvedBy || '-'}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {timebankSubTab === 'redemptions' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                    🎁 Reward Redemptions Registry / 兑换申请管理
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '0.75rem' }}>Volunteer</th>
+                          <th style={{ padding: '0.75rem' }}>Reward Title</th>
+                          <th style={{ padding: '0.75rem' }}>Cost / 积分花费</th>
+                          <th style={{ padding: '0.75rem' }}>Redeemed Date</th>
+                          <th style={{ padding: '0.75rem' }}>Status</th>
+                          <th style={{ padding: '0.75rem' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {timebankRedemptions.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              No redemption requests found. / 暂无兑换记录
+                            </td>
+                          </tr>
+                        ) : (
+                          timebankRedemptions.map((r) => (
+                            <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-light)' }}>{r.volunteerName}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{r.volunteerEmail}</div>
+                              </td>
+                              <td style={{ padding: '0.75rem', fontWeight: 500, color: 'var(--text-light)' }}>{r.rewardTitle}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--accent)' }}>{r.cost}</span> credits
+                              </td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{r.date}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{
+                                  fontSize: '0.75rem',
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '6px',
+                                  fontWeight: 700,
+                                  background: r.status === 'Completed' || r.status === 'Completed/Delivered' ? 'var(--health-glow)' : 'rgba(245,158,11,0.08)',
+                                  color: r.status === 'Completed' || r.status === 'Completed/Delivered' ? 'var(--health-dark)' : 'var(--accent-dark)'
+                                }}>
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.75rem' }}>
+                                {r.status === 'Pending' ? (
+                                  <button
+                                    onClick={() => completeRedemption(r.id)}
+                                    className="btn btn-primary"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', background: 'var(--primary)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    ✓ Mark Completed
+                                  </button>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Processed</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {timebankSubTab === 'catalog' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div className="card" style={{ padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+                      🛍️ Rewards Catalog / 礼品库列表
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setEditRewardId(null);
+                        setRewardTitle('');
+                        setRewardCost(10);
+                        setRewardCategory('Course');
+                        setRewardPartner('');
+                        setRewardDesc('');
+                        setShowRewardForm(true);
+                      }}
+                      className="btn btn-primary"
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', background: 'var(--primary)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer', borderRadius: '8px' }}
+                    >
+                      ➕ Add New Reward / 上架新礼品
+                    </button>
+                  </div>
+                  
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '0.75rem' }}>Reward Info</th>
+                          <th style={{ padding: '0.75rem' }}>Category</th>
+                          <th style={{ padding: '0.75rem' }}>Cost / 兑换积分</th>
+                          <th style={{ padding: '0.75rem' }}>Partner</th>
+                          <th style={{ padding: '0.75rem' }}>Description</th>
+                          <th style={{ padding: '0.75rem' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rewards.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                              No rewards in the catalog. / 暂无商品
+                            </td>
+                          </tr>
+                        ) : (
+                          rewards.map((rew) => (
+                            <tr key={rew.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: 600, color: 'var(--text-light)' }}>{rew.title}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  padding: '0.15rem 0.45rem',
+                                  background: 'var(--primary-glow)',
+                                  color: 'var(--primary)',
+                                  borderRadius: '4px',
+                                  fontWeight: 600
+                                }}>
+                                  {rew.category}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.75rem', fontWeight: 700, color: 'var(--accent)', fontSize: '1.05rem' }}>{rew.cost} H</td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-main)' }}>{rew.partner}</td>
+                              <td style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '300px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{rew.desc}</td>
+                              <td style={{ padding: '0.75rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button
+                                    onClick={() => handleEditReward(rew)}
+                                    className="btn btn-outline"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'var(--primary)', color: 'var(--primary)', background: 'transparent', cursor: 'pointer', fontWeight: 700 }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteReward(rew.id, rew.title)}
+                                    className="btn btn-outline"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', borderColor: 'var(--danger)', color: 'var(--danger)', background: 'transparent', cursor: 'pointer' }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* Time Bank Reward Form Modal Overlay */}
+      {showRewardForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(11, 19, 41, 0.85)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            width: '92%',
+            maxWidth: '520px',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.25rem 2rem',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'var(--bg-sidebar)',
+              color: '#ffffff'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'Outfit, sans-serif' }}>
+                {editRewardId ? '📝 Edit Reward / 编辑礼品' : '➕ Add New Reward / 上架新礼品'}
+              </h3>
+              <button 
+                onClick={() => setShowRewardForm(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: 'none',
+                  color: '#ffffff',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.1rem'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSaveReward} style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Reward Title / 礼品名称 *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. RM50 Giant Grocery Voucher"
+                  value={rewardTitle}
+                  onChange={(e) => setRewardTitle(e.target.value)}
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-light)',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Cost / 所需积分 *</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={rewardCost}
+                    onChange={(e) => setRewardCost(Number(e.target.value))}
+                    style={{
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-light)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Category / 分类 *</label>
+                  <select
+                    value={rewardCategory}
+                    onChange={(e) => setRewardCategory(e.target.value)}
+                    style={{
+                      padding: '0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-light)',
+                      outline: 'none',
+                      height: '42px'
+                    }}
+                  >
+                    <option value="Course">Course (课程)</option>
+                    <option value="Wellness">Wellness (健康康养)</option>
+                    <option value="Voucher">Voucher (礼券)</option>
+                    <option value="Product">Product (商品/手册)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Partner / 合作赞助商 *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. MCSA Academy / Jaya Grocer"
+                  value={rewardPartner}
+                  onChange={(e) => setRewardPartner(e.target.value)}
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-light)',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Description / 礼品描述</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the reward details, terms, or how to redeem..."
+                  value={rewardDesc}
+                  onChange={(e) => setRewardDesc(e.target.value)}
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-light)',
+                    outline: 'none',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRewardForm(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-main)',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'var(--primary)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save Reward
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Member Credential Vetting Modal Overlay */}
       {selectedMember && (
@@ -2401,7 +3974,7 @@ export default function AdminPage() {
                 borderRight: '1px solid rgba(255,255,255,0.06)',
                 padding: '2rem 1.5rem',
                 overflowY: 'auto',
-                backgroundColor: 'rgba(15, 23, 42, 0.4)',
+                backgroundColor: '#0f172a',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1.5rem'
@@ -2553,9 +4126,9 @@ export default function AdminPage() {
                   </h5>
                   <p style={{
                     fontSize: '0.85rem',
-                    color: 'var(--text-main)',
+                    color: 'rgba(255,255,255,0.9)',
                     lineHeight: '1.5',
-                    background: 'rgba(255,255,255,0.02)',
+                    background: 'rgba(255,255,255,0.05)',
                     padding: '0.85rem 1.1rem',
                     borderRadius: '10px',
                     border: '1px solid rgba(255,255,255,0.04)',
@@ -2659,7 +4232,7 @@ export default function AdminPage() {
                       borderRadius: '12px 12px 0 0',
                       fontSize: '0.88rem',
                       fontWeight: 700,
-                      color: docTab === 'icDoc' ? '#ffffff' : 'var(--text-muted)',
+                      color: docTab === 'icDoc' ? 'var(--text-light)' : 'var(--text-muted)',
                       cursor: 'pointer',
                       borderTop: docTab === 'icDoc' ? '3px solid var(--primary)' : '3px solid transparent',
                       marginTop: '-3px',
@@ -2681,7 +4254,7 @@ export default function AdminPage() {
                       borderRadius: '12px 12px 0 0',
                       fontSize: '0.88rem',
                       fontWeight: 700,
-                      color: docTab === 'cert' ? '#ffffff' : 'var(--text-muted)',
+                      color: docTab === 'cert' ? 'var(--text-light)' : 'var(--text-muted)',
                       cursor: 'pointer',
                       borderTop: docTab === 'cert' ? '3px solid var(--primary)' : '3px solid transparent',
                       marginTop: '-3px',
@@ -2703,7 +4276,7 @@ export default function AdminPage() {
                       borderRadius: '12px 12px 0 0',
                       fontSize: '0.88rem',
                       fontWeight: 700,
-                      color: docTab === 'health' ? '#ffffff' : 'var(--text-muted)',
+                      color: docTab === 'health' ? 'var(--text-light)' : 'var(--text-muted)',
                       cursor: 'pointer',
                       borderTop: docTab === 'health' ? '3px solid var(--primary)' : '3px solid transparent',
                       marginTop: '-3px',
@@ -3421,52 +4994,31 @@ export default function AdminPage() {
             </h3>
 
             {/* Card Render */}
-            <div style={{
-              width: '100%',
-              height: '276px',
-              background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
-              color: 'white',
-              padding: '2rem',
-              borderRadius: '24px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              position: 'relative',
-              overflow: 'hidden',
-              border: '1px solid rgba(255, 255, 255, 0.08)'
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: '-50%',
-                left: '-50%',
-                width: '200%',
-                height: '200%',
-                background: 'linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.08) 50%, transparent 55%)',
-                pointerEvents: 'none'
-              }}></div>
+            <div className="union-member-card admin-theme">
+              {/* Glowing highlight reflection */}
+              <div className="union-member-card-glow"></div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="union-member-card-header">
                 <div>
-                  <h3 style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+                  <h3 className="union-member-card-title">
                     MULTICARE SUPPORT UNION
                   </h3>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                  <span className="union-member-card-subtitle">
                     MCSA MALAYSIA VALIDATED REGISTRY
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <div className="union-member-card-logo-container">
                   {(selectedUnionCard?.category || '').includes('Patient Companion') && (
                     <img 
                       src="/aplus-assist-logo.jpg" 
                       alt="A+ Assist Logo" 
-                      style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: '#0d162d', objectFit: 'contain', padding: '1px' }} 
+                      className="union-member-card-logo aplus" 
                     />
                   )}
                   <img 
                     src="/mcsa-logo.png" 
                     alt="MCSA Logo" 
-                    style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'white', padding: '1px' }} 
+                    className="union-member-card-logo" 
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                     }}
@@ -3474,86 +5026,87 @@ export default function AdminPage() {
                 </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', margin: '0.5rem 0' }}>
-                <div style={{
-                  width: '70px',
-                  height: '85px',
-                  backgroundColor: '#1e293b',
-                  border: '2px solid var(--accent)',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                  position: 'relative',
-                  flexShrink: 0
-                }}>
+              <div className="union-member-card-body">
+                <div className="union-member-card-photo-frame">
                   <img 
                     src={selectedUnionCard.photo} 
                     alt={selectedUnionCard.name} 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    backgroundColor: 'rgba(245, 158, 11, 0.9)',
-                    color: '#000000',
-                    fontSize: '0.45rem',
-                    fontWeight: 'bold',
-                    textAlign: 'center',
-                    padding: '1px 0'
-                  }}>
+                  <div className="union-member-card-photo-tag">
                     PHOTO ID
                   </div>
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div className="union-member-card-info-col">
                   <div>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                    <span className="union-member-card-label">
                       Membership ID
                     </span>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.05em' }}>
+                    <span className="union-member-card-val-id">
                       {selectedUnionCard.member_number}
                     </span>
                   </div>
-                  <div>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Specialty Roles</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)', whiteSpace: 'normal', display: 'block' }}>
-                      {selectedUnionCard.category}
-                    </span>
+                  <div style={{ display: 'flex', gap: '3.6cqw' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span className="union-member-card-label">Specialty Roles</span>
+                      <span className="union-member-card-val-spec">
+                        {selectedUnionCard.category}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span className="union-member-card-label">NRIC / ID No.</span>
+                      <span className="union-member-card-val-mono">
+                        {selectedUnionCard.nric || '830812-14-5544'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Holder Name</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>{selectedUnionCard.name}</span>
+              <div className="union-member-card-footer">
+                <div className="union-member-card-footer-item">
+                  <span className="union-member-card-label">Holder Name</span>
+                  <span className="union-member-card-val-text">{selectedUnionCard.name}</span>
                 </div>
                 
-                <div style={{
-                  border: '2px solid var(--health)',
-                  color: 'var(--health)',
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '4px',
-                  fontSize: '0.7rem',
-                  fontWeight: 'bold',
-                  transform: 'rotate(-5deg)',
-                  textTransform: 'uppercase',
-                  backgroundColor: 'var(--bg-main)',
-                  marginRight: 'auto',
-                  marginLeft: '1rem'
-                }}>
+                <div className="union-member-card-status-stamp admin-style">
                   ✓ ACTIVE
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Expiration</span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{selectedUnionCard.expiry}</span>
+                <div className="union-member-card-footer-item" style={{ textAlign: 'right' }}>
+                  <span className="union-member-card-label">Expiration</span>
+                  <span className="union-member-card-val-mono">{selectedUnionCard.expiry}</span>
                 </div>
+              </div>
+            </div>
+
+            <div style={{
+              width: '100%',
+              padding: '1rem',
+              borderRadius: '12px',
+              background: 'var(--primary-light)',
+              border: '1px solid var(--border)',
+              fontSize: '0.82rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Contribution Compliance / 奉献达标率:</span>
+                <strong style={{ color: 'var(--text-light)' }}>
+                  {selectedUnionCard.contributionCompliance !== undefined ? selectedUnionCard.contributionCompliance : 100}%
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Dispatch Priority / 派单优先级:</span>
+                {(() => {
+                  const comp = selectedUnionCard.contributionCompliance !== undefined ? selectedUnionCard.contributionCompliance : 100;
+                  if (comp >= 90) return <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--health)', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>⚡ High Priority / 优先派单</span>;
+                  if (comp >= 50) return <span className="badge" style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: 'var(--accent)', border: '1px solid rgba(37, 99, 235, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>✔️ Standard / 正常派单</span>;
+                  if (comp > 0) return <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>⚠️ Low / 限流派单</span>;
+                  return <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>🚫 Restricted / 限制派单</span>;
+                })()}
               </div>
             </div>
 

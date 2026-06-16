@@ -11,6 +11,7 @@ export const translations: Record<Language, any> = {
       services: 'Services',
       membership: 'Membership',
       verify: 'Verify Licensure',
+      blog: 'Blog & Stories',
       portalLogin: 'Union Portal',
       logout: 'Logout'
     },
@@ -138,7 +139,15 @@ export const translations: Record<Language, any> = {
       adviceDesc: 'This membership card operates with encrypted registry validation. You can present this QR-bound serial card to clinic or hospital supervisors to access outpatient priorities.',
       dispatchTitle: 'Open Union Dispatch Broadcasts',
       dispatchDesc: 'Click Accept to dispatch and register shift on your timeline.',
-      acceptBtn: 'Accept Shift'
+      acceptBtn: 'Accept Shift',
+      contributionTitle: 'Guild Contribution & Priority Level',
+      contributionCompliance: 'Tithing Compliance',
+      dispatchPriority: 'Dispatch Priority',
+      contributionHint: 'Keep your contribution compliance at 100% (10% of job earnings) to get prioritized matching. Dues help fund union resources and member support.',
+      priorityHigh: 'High Priority (Preferred)',
+      priorityStandard: 'Standard Priority',
+      priorityLow: 'Low Priority (Throttled)',
+      priorityRestricted: 'Restricted (Dues Pending)'
     }
   },
   bm: {
@@ -148,6 +157,7 @@ export const translations: Record<Language, any> = {
       services: 'Perkhidmatan',
       membership: 'Keahlian',
       verify: 'Sahkan Lesen',
+      blog: 'Blog & Cerita',
       portalLogin: 'Portal Kesatuan',
       logout: 'Log Keluar'
     },
@@ -275,7 +285,15 @@ export const translations: Record<Language, any> = {
       adviceDesc: 'Kad keahlian ini beroperasi dengan pengesahan daftar disulitkan. Anda boleh menunjukkan kad bersiri pautan QR ini kepada penyelia klinik atau hospital untuk mengakses keutamaan pesakit luar.',
       dispatchTitle: 'Siaran Tugasan Kesatuan Terbuka',
       dispatchDesc: 'Klik Terima untuk mengambil tugasan dan mendaftarkan syif pada jadual anda.',
-      acceptBtn: 'Terima Tugasan'
+      acceptBtn: 'Terima Tugasan',
+      contributionTitle: 'Caruman Kesatuan & Tahap Keutamaan',
+      contributionCompliance: 'Kepatuhan Caruman',
+      dispatchPriority: 'Tahap Keutamaan Tugasan',
+      contributionHint: 'Kekalkan kepatuhan caruman pada 100% (10% daripada hasil kerja) untuk mendapatkan keutamaan tugasan. Caruman anda membantu membiayai sumber kesatuan.',
+      priorityHigh: 'Keutamaan Tinggi (Pilihan)',
+      priorityStandard: 'Keutamaan Standard (Biasa)',
+      priorityLow: 'Keutamaan Rendah (Dihadkan)',
+      priorityRestricted: 'Disekat (Tunggakan Caruman)'
     }
   },
   zh: {
@@ -285,6 +303,7 @@ export const translations: Record<Language, any> = {
       services: '专业服务',
       membership: '公会会籍',
       verify: '执业验证',
+      blog: '博客故事',
       portalLogin: '公会入口',
       logout: '退出登录'
     },
@@ -412,7 +431,15 @@ export const translations: Record<Language, any> = {
       adviceDesc: '此会员卡采用加密注册验证。您可以将此绑定了二维码的序列号卡出示给诊所或医院主管，以享受绿色就医通道优先权。',
       dispatchTitle: '公开公会派遣广播',
       dispatchDesc: '点击接单即可将该派遣注册并加入您的日程时间轴中。',
-      acceptBtn: '确认接单'
+      acceptBtn: '确认接单',
+      contributionTitle: '公会奉献与派单优先等级',
+      contributionCompliance: '奉献达标率',
+      dispatchPriority: '接单优先等级',
+      contributionHint: '请保持 100% 的收益奉献（接单收入的 10%）以获得优先匹配接单。您的奉献款项直接维持公会运转与会员福利。',
+      priorityHigh: '优先派单 (推荐)',
+      priorityStandard: '正常派单 (标准)',
+      priorityLow: '限流派单 (贡献偏低)',
+      priorityRestricted: '限制派单 (未交款)'
     }
   }
 };

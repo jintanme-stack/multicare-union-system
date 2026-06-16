@@ -8,11 +8,30 @@ import { translations, Language } from '@/lib/translations';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [lang, setLang] = useState<Language>('en');
+  const [user, setUser] = useState<any>(null);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [isMember, setIsMember] = useState<boolean>(false);
+  const [isClient, setIsClient] = useState<boolean>(false);
+  const [isVolunteer, setIsVolunteer] = useState<boolean>(false);
   const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
 
   useEffect(() => {
     setLang(store.getLanguage() as Language);
+    setUser(store.getCurrentUser());
+    setAdminEmail(localStorage.getItem('mcsa_logged_admin_email'));
+    setIsMember(!!localStorage.getItem('mcsa_logged_member'));
+    setIsClient(!!localStorage.getItem('mcsa_client_email'));
+    setIsVolunteer(!!localStorage.getItem('mcsa_logged_volunteer'));
   }, []);
+
+  const handleLogout = async () => {
+    await store.signOut();
+    localStorage.removeItem('mcsa_logged_admin_email');
+    localStorage.removeItem('mcsa_logged_volunteer');
+    localStorage.removeItem('mcsa_logged_member');
+    localStorage.removeItem('mcsa_client_email');
+    window.location.href = '/';
+  };
 
   const handleLangChange = (newLang: Language) => {
     store.setLanguage(newLang);
@@ -28,6 +47,7 @@ export default function Navbar() {
     { label: t.nav.services, href: '/services' },
     { label: t.nav.verify, href: '/verify' },
     { label: t.nav.membership, href: '/membership' },
+    { label: t.nav.blog || 'Blog', href: '/blog' },
     { label: t.register.title || 'Apply License', href: '/register', highlight: true }
   ];
 
@@ -78,7 +98,7 @@ export default function Navbar() {
       </div>
 
       {/* Desktop Menu */}
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }} className="desktop-nav">
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'nowrap', flexShrink: 0 }} className="desktop-nav">
         {navLinks.map((link) => (
           <a
             key={link.href}
@@ -107,20 +127,101 @@ export default function Navbar() {
           </a>
         ))}
 
-        <a
-          href="/login"
-          className="btn btn-primary"
-          style={{
-            padding: '0.4rem 1rem',
-            fontSize: '0.82rem',
-            borderRadius: '8px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}
-        >
-          {t.nav.portalLogin} <ExternalLink size={14} />
-        </a>
+        {user || adminEmail ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              👤 {user ? user.email : adminEmail}
+            </span>
+            {adminEmail && (
+              <a
+                href="/admin"
+                className="btn btn-primary"
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '8px',
+                  textDecoration: 'none'
+                }}
+              >
+                {lang === 'zh' ? '管理后台' : 'Admin Panel'}
+              </a>
+            )}
+            {!adminEmail && isMember && (
+              <a
+                href="/dashboard"
+                className="btn btn-primary"
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '8px',
+                  textDecoration: 'none'
+                }}
+              >
+                {lang === 'zh' ? '会员中心' : 'Member Portal'}
+              </a>
+            )}
+            {!adminEmail && isClient && (
+              <a
+                href="/portal"
+                className="btn btn-primary"
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '8px',
+                  textDecoration: 'none'
+                }}
+              >
+                {lang === 'zh' ? '家属中心' : 'Family Portal'}
+              </a>
+            )}
+            {!adminEmail && isVolunteer && (
+              <a
+                href="/timebank"
+                className="btn btn-primary"
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  backgroundColor: '#f59e0b',
+                  borderColor: '#f59e0b'
+                }}
+              >
+                {lang === 'zh' ? '义工中心' : 'Volunteer Portal'}
+              </a>
+            )}
+            <button
+              onClick={handleLogout}
+              className="btn btn-outline"
+              style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.8rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                borderColor: '#ef4444',
+                color: '#ef4444',
+                background: 'transparent'
+              }}
+            >
+              {lang === 'zh' ? '安全退出' : 'Logout'}
+            </button>
+          </div>
+        ) : (
+          <a
+            href="/login"
+            className="btn btn-primary"
+            style={{
+              padding: '0.4rem 1rem',
+              fontSize: '0.82rem',
+              borderRadius: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}
+          >
+            {t.nav.portalLogin} <ExternalLink size={14} />
+          </a>
+        )}
 
         {/* Language Switcher Selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem' }}>
@@ -206,20 +307,106 @@ export default function Navbar() {
               {link.label}
             </a>
           ))}
-          <a
-            href="/login"
-            className="btn btn-primary"
-            style={{
-              padding: '0.6rem 1.25rem',
-              fontSize: '0.9rem',
-              borderRadius: '8px',
-              textAlign: 'center',
-              justifyContent: 'center',
-              marginTop: '0.5rem'
-            }}
-          >
-            {t.nav.portalLogin} <ExternalLink size={14} />
-          </a>
+          {user || adminEmail ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Logged in as: {user ? user.email : adminEmail}
+              </span>
+              {adminEmail && (
+                <a
+                  href="/admin"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    textAlign: 'center'
+                  }}
+                >
+                  {lang === 'zh' ? '进入管理后台' : 'Go to Admin Panel'}
+                </a>
+              )}
+              {!adminEmail && isMember && (
+                <a
+                  href="/dashboard"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    textAlign: 'center'
+                  }}
+                >
+                  {lang === 'zh' ? '进入会员中心' : 'Go to Member Portal'}
+                </a>
+              )}
+              {!adminEmail && isClient && (
+                <a
+                  href="/portal"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    textAlign: 'center'
+                  }}
+                >
+                  {lang === 'zh' ? '进入家属中心' : 'Go to Family Portal'}
+                </a>
+              )}
+              {!adminEmail && isVolunteer && (
+                <a
+                  href="/timebank"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b'
+                  }}
+                >
+                  {lang === 'zh' ? '进入义工中心' : 'Go to Volunteer Portal'}
+                </a>
+              )}
+              <button
+                onClick={handleLogout}
+                className="btn btn-outline"
+                style={{
+                  padding: '0.6rem 1.25rem',
+                  fontSize: '0.9rem',
+                  borderRadius: '8px',
+                  borderColor: '#ef4444',
+                  color: '#ef4444',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                {lang === 'zh' ? '安全退出' : 'Logout'}
+              </button>
+            </div>
+          ) : (
+            <a
+              href="/login"
+              className="btn btn-primary"
+              style={{
+                padding: '0.6rem 1.25rem',
+                fontSize: '0.9rem',
+                borderRadius: '8px',
+                textAlign: 'center',
+                justifyContent: 'center',
+                marginTop: '0.5rem'
+              }}
+            >
+              {t.nav.portalLogin} <ExternalLink size={14} />
+            </a>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Language / 语言:</span>
             <select 

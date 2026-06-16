@@ -33,10 +33,23 @@ export default function RegisterPage() {
   
   const [submitted, setSubmitted] = useState(false);
   const [assignedAppId, setAssignedAppId] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [lang, setLang] = useState<Language>('en');
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setLang(store.getLanguage() as Language);
+    
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   const compressImage = (base64Str: string, maxDim = 250, quality = 0.75): Promise<string> => {
@@ -155,7 +168,7 @@ export default function RegisterPage() {
     }
   };
 
-    const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Explicit client-side feedback for all required fields
@@ -177,6 +190,10 @@ export default function RegisterPage() {
     }
     if (!nric.trim()) {
       alert(lang === 'zh' ? '⚠️ 请输入您的身份证号码。' : lang === 'bm' ? '⚠️ Sila masukkan No. Kad Pengenalan anda.' : '⚠️ Please enter your NRIC / ID number.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      alert(lang === 'zh' ? '⚠️ 密码长度不能少于 6 位。' : lang === 'bm' ? '⚠️ Kata laluan mestilah sekurang-kurangnya 6 aksara.' : '⚠️ Password must be at least 6 characters.');
       return;
     }
     if (!bio.trim()) {
@@ -228,38 +245,54 @@ export default function RegisterPage() {
       photo
     };
 
-    try {
-      const currentPending = store.getPendingMembers();
-      store.setPendingMembers([...currentPending, newPending]);
-      setAssignedAppId(appId);
-      setSubmitted(true);
-    } catch (err) {
-      console.error("Storage write failed, attempting optimizations:", err);
-      // Quota exceeded: retry by clearing/truncating heavy base64 data and replacing with a mock small base64 PDF
-      const warningMsg = lang === 'zh' 
-        ? '⚠️ 提示：上传的文件对于浏览器本地存储空间过大，我们将采用优化的仿真文档进行注册，不影响您的资质核验。' 
-        : lang === 'bm' 
-        ? '⚠️ Nota: Dokumen yang dimuat naik terlalu besar untuk storan pelayar. Kami akan menggunakan dokumen simulasi yang dioptimumkan untuk pendaftaran.' 
-        : '⚠️ Note: The uploaded documents are too large for browser local storage. We will simulate the upload with optimized mock documents for review.';
-      
-      alert(warningMsg);
-      
-      const optimizedPending = {
-        ...newPending,
-        proofData: proofData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBDcmVkZW50aWFsIEFjY3JlZGl0ZWQgUERGKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxOSAwMDAwMCBuIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : "",
-        healthCertData: healthCertData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBUQiBDbGVhcmFuY2UgUmVjb3JkIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCDAwMDAwMDAwMTkgMDAwMDAgbIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : "",
-        icDocData: icDocData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBJQyBDYXJkIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCDAwMDAwMDAwMTkgMDAwMDAgbIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : ""
-      };
-
+    const submitToStore = async (pendingItem: any) => {
       try {
-        const currentPending = store.getPendingMembers();
-        store.setPendingMembers([...currentPending, optimizedPending]);
+        await (store as any).appendPendingMember(pendingItem);
         setAssignedAppId(appId);
         setSubmitted(true);
-      } catch (finalErr) {
-        alert("Fatal: Unable to register even with optimized files. Please choose a smaller profile image.");
+      } catch (err) {
+        console.error("Storage write failed, attempting optimizations:", err);
+        const warningMsg = lang === 'zh' 
+          ? '⚠️ 提示：上传的文件对于浏览器本地存储空间过大，我们将采用优化的仿真文档进行注册，不影响您的资质核验。' 
+          : lang === 'bm' 
+          ? '⚠️ Nota: Dokumen yang muat naik terlalu besar untuk storan pelayar. Kami akan menggunakan dokumen simulasi yang dioptimumkan untuk pendaftaran.' 
+          : '⚠️ Note: The uploaded documents are too large for browser local storage. We will simulate the upload with optimized mock documents for review.';
+        
+        alert(warningMsg);
+        
+        const optimizedPending = {
+          ...pendingItem,
+          proofData: proofData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBDcmVkZW50aWFsIEFjY3JlZGl0ZWQgUERGKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxOSAwMDAwMCBuIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : "",
+          healthCertData: healthCertData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBUQiBDbGVhcmFuY2UgUmVjb3JkIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCDAwMDAwMDAwMTkgMDAwMDAgbIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : "",
+          icDocData: icDocData ? "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iagogIDw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+CmVuZG9iagoyIDAgb2JqCiAgPDwvVHlwZS9QYWdlcy9LaWRzWzMgMCBSXS9Db3VudCAxPj4KZW5kb2JqCjMgMCBvYmoKICA8PC9UeXBlL1BhZ2UvUGFyZW50IDIgMCBSL01lZGlhQm94WzAgMCA1OTUgODQyXS9Db250ZW50cyA0IDAgUj4+CmVuZG9iago0IDAgb2JqCiAgPDwvTGVuZ3RoIDU4Pj5zdHJlYW0KQlQKICAvRjEgMjQgVGYKICA3MiA3MTIgVGQKICAoTW9jayBJQyBDYXJkIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCDAwMDAwMDAwMTkgMDAwMDAgbIAowMDAwMDAwMDcwIDAwMDAwIG4gCjAwMDAwMDAxMjcgMDAwMDAgbIAowMDAwMDAwMjMwIDAwMDAwIG4gCnRyYWlsZXIKICA8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgogMzM5CiUlRU9GCg==" : ""
+        };
+        try {
+          await (store as any).appendPendingMember(optimizedPending);
+          setAssignedAppId(appId);
+          setSubmitted(true);
+        } catch (finalErr) {
+          alert("Fatal: Unable to register even with optimized files. Please choose a smaller profile image.");
+        }
       }
-    }
+    };
+
+    setIsSubmitting(true);
+    store.signUp(email, password)
+      .then((res) => {
+        if (res.error) {
+          alert('Registration Error / 注册失败: ' + res.error.message);
+          setIsSubmitting(false);
+          return;
+        }
+        const userId = res.data.user?.id;
+        const pendingItemWithUser = { ...newPending, user_id: userId };
+        submitToStore(pendingItemWithUser);
+        setIsSubmitting(false);
+      })
+      .catch((err) => {
+        alert('Registration Error / 注册失败: ' + err.message);
+        setIsSubmitting(false);
+      });
   };
 
   const t = translations[lang] || translations.en;
@@ -345,7 +378,7 @@ export default function RegisterPage() {
                     1. {lang === 'zh' ? '基本身份信息' : lang === 'bm' ? 'Maklumat Identiti & Perhubungan' : 'Identity & Contact Details'}
                   </h3>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
                       <label className="form-label">{t.register.fullName}</label>
                       <input
@@ -370,7 +403,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
                       <label className="form-label">{t.register.phone}</label>
                       <input
@@ -395,7 +428,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
                     <div className="form-group">
                       <label className="form-label">
                         {lang === 'zh' ? '身份证号码 / NRIC (开具报税收据所必需)' : lang === 'bm' ? 'No. Kad Pengenalan (Diperlukan untuk resit cukai)' : 'NRIC / ID Number (Required for Tax Receipts)'}
@@ -407,6 +440,20 @@ export default function RegisterPage() {
                         placeholder="e.g. 870615-10-5622"
                         value={nric}
                         onChange={(e) => setNric(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">
+                        {lang === 'zh' ? '设置登录密码 (至少 6 位)' : lang === 'bm' ? 'Kata Laluan Log Masuk (Min 6)' : 'Login Password (Min 6 chars)'}
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        className="form-input"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                       />
                     </div>
                   </div>
@@ -606,12 +653,12 @@ export default function RegisterPage() {
                     4. {lang === 'zh' ? '学术资格与体检诊断附件' : lang === 'bm' ? 'Sijil & Dokumen Lampiran Kesihatan' : 'Credentials & Diagnostics Attachments'}
                   </h3>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
                     {/* Professional Certificate Upload Card */}
                     <div className="form-group">
                       <label className="form-label">{lang === 'zh' ? '专业资格证书文件 (.pdf/.jpg/.png)' : 'Professional Certification File'}</label>
                       <label style={{ 
-                        border: proof ? '2px solid var(--health)' : '2px dashed rgba(255,255,255,0.1)',
+                        border: proof ? '2px solid var(--health)' : '2px dashed var(--border)',
                         borderRadius: '12px',
                         padding: '1.5rem',
                         display: 'flex',
@@ -619,13 +666,13 @@ export default function RegisterPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        background: proof ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0.02)',
+                        background: proof ? 'rgba(16,185,129,0.03)' : 'var(--bg-input)',
                         transition: 'all 0.2s',
                         textAlign: 'center',
                         height: '110px'
                       }}
                       onMouseOver={(e)=>e.currentTarget.style.borderColor=proof ? 'var(--health)' : 'var(--primary)'}
-                      onMouseOut={(e)=>e.currentTarget.style.borderColor=proof ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
+                      onMouseOut={(e)=>e.currentTarget.style.borderColor=proof ? 'var(--health)' : 'var(--border)'}
                       >
                         <UploadCloud size={24} style={{ color: proof ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: proof ? 'var(--health)' : 'var(--text-main)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -642,7 +689,7 @@ export default function RegisterPage() {
                     <div className="form-group">
                       <label className="form-label">{lang === 'zh' ? '肺结核体检诊断合格报告 (.pdf/.jpg/.png)' : 'TB & Medical Clearance Record'}</label>
                       <label style={{ 
-                        border: healthCert ? '2px solid var(--health)' : '2px dashed rgba(255,255,255,0.1)',
+                        border: healthCert ? '2px solid var(--health)' : '2px dashed var(--border)',
                         borderRadius: '12px',
                         padding: '1.5rem',
                         display: 'flex',
@@ -650,13 +697,13 @@ export default function RegisterPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        background: healthCert ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0.02)',
+                        background: healthCert ? 'rgba(16,185,129,0.03)' : 'var(--bg-input)',
                         transition: 'all 0.2s',
                         textAlign: 'center',
                         height: '110px'
                       }}
                       onMouseOver={(e)=>e.currentTarget.style.borderColor=healthCert ? 'var(--health)' : 'var(--primary)'}
-                      onMouseOut={(e)=>e.currentTarget.style.borderColor=healthCert ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
+                      onMouseOut={(e)=>e.currentTarget.style.borderColor=healthCert ? 'var(--health)' : 'var(--border)'}
                       >
                         <UploadCloud size={24} style={{ color: healthCert ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: healthCert ? 'var(--health)' : 'var(--text-main)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -670,14 +717,14 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
                     {/* NRIC / IC Document Upload Card */}
-                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <div className="form-group" style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
                       <label className="form-label">
                         {lang === 'zh' ? '身份证 (NRIC/IC) 正反面复印件或照片 (.pdf/.jpg/.png) - 必填安全审核' : 'NRIC / IC Card Front & Back Photo or Copy (.pdf/.jpg/.png) - Required for safety verification'}
                       </label>
                       <label style={{ 
-                        border: icDoc ? '2px solid var(--health)' : '2px dashed rgba(255,255,255,0.1)',
+                        border: icDoc ? '2px solid var(--health)' : '2px dashed var(--border)',
                         borderRadius: '12px',
                         padding: '1.5rem',
                         display: 'flex',
@@ -685,13 +732,13 @@ export default function RegisterPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        background: icDoc ? 'rgba(16,185,129,0.03)' : 'rgba(255,255,255,0.02)',
+                        background: icDoc ? 'rgba(16,185,129,0.03)' : 'var(--bg-input)',
                         transition: 'all 0.2s',
                         textAlign: 'center',
                         height: '110px'
                       }}
                       onMouseOver={(e)=>e.currentTarget.style.borderColor=icDoc ? 'var(--health)' : 'var(--primary)'}
-                      onMouseOut={(e)=>e.currentTarget.style.borderColor=icDoc ? 'var(--health)' : 'rgba(255,255,255,0.1)'}
+                      onMouseOut={(e)=>e.currentTarget.style.borderColor=icDoc ? 'var(--health)' : 'var(--border)'}
                       >
                         <UploadCloud size={24} style={{ color: icDoc ? 'var(--health)' : 'var(--primary)', marginBottom: '0.4rem' }} />
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: icDoc ? 'var(--health)' : 'var(--text-main)', maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

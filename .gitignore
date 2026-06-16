@@ -34,3 +34,5 @@ next-env.d.ts
 
 # backups
 public/mcsa-logo-original.png
+
+.vercel

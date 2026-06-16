@@ -221,6 +221,10 @@ export default function CaregiverDashboard() {
   const [selectedMapItem, setSelectedMapItem] = useState<any>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [escortForms, setEscortForms] = useState<any[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [shareType, setShareType] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Calendar states
   const [currentYear, setCurrentYear] = useState<number>(2026);
@@ -589,6 +593,14 @@ export default function CaregiverDashboard() {
         parsed.expiry = '2026-06-30';
         localStorage.setItem('mcsa_logged_member', JSON.stringify(parsed));
       }
+      
+      // Look up updated member details from central store to ensure state synchronization
+      const centralMembers = store.getUnionMembers();
+      const matched = centralMembers.find((m: any) => m.id === parsed.id || m.member_number === parsed.member_number);
+      if (matched) {
+        parsed = { ...parsed, ...matched };
+      }
+      
       setMember(parsed);
       currentMember = parsed;
       const catLower = (parsed.category || '').toLowerCase();
@@ -1340,6 +1352,81 @@ export default function CaregiverDashboard() {
     alert("📢 Shared with Family Portal successfully! / 实时就医数据与材料已成功分享给家属。");
   };
 
+  const shareEscortViaWhatsApp = () => {
+    // Also trigger portal sync so the family can see it on the website
+    const updated = { ...escortSession, isShared: true, lastUpdated: new Date().toLocaleTimeString().substring(0, 5) };
+    setEscortSession(updated);
+    store.setActiveEscortSession(updated);
+
+    const companionName = member ? member.name : 'Li Xiulan';
+    const facility = `${escortSession.hospital || 'Hospital'} (${escortSession.department || 'Outpatient'})`;
+    
+    // Milestones translation map
+    const milestones = [
+      { en: 'Patient Met', zh: '已接诊患者', bm: 'Pesakit Ditemui' },
+      { en: 'Clinic Queuing', zh: '排队候诊中', bm: 'Menunggu di Klinik' },
+      { en: 'Appointment Ongoing', zh: '医生诊疗中', bm: 'Rundingan Sedang Dijalankan' },
+      { en: 'Payment/Medicine', zh: '代缴费代取药', bm: 'Pembayaran & Pengambilan Ubat' },
+      { en: 'Check-out/Transfer', zh: '就诊结束送回', bm: 'Selesai & Pulang' }
+    ];
+    const currentMilestone = milestones[escortSession.statusIndex] || milestones[0];
+    let milestoneText = '';
+    if (lang === 'zh') {
+      milestoneText = `✅ 当前进度: ${currentMilestone.zh} (第 ${escortSession.statusIndex + 1}/5 阶段)`;
+    } else if (lang === 'bm') {
+      milestoneText = `✅ Status Semasa: ${currentMilestone.bm} (Langkah ${escortSession.statusIndex + 1}/5)`;
+    } else {
+      milestoneText = `✅ Current Status: ${currentMilestone.en} (Step ${escortSession.statusIndex + 1}/5)`;
+    }
+
+    const portalLink = `${window.location.origin}/portal`;
+    
+    let message = '';
+    if (lang === 'zh') {
+      message = `🏥 *Care Connect Hub - 就医陪诊服务实时报告* 🏥\n` +
+                `----------------------------------------\n` +
+                `👤 *患者姓名:* ${escortSession.patientName || '家属'}\n` +
+                `👤 *患者年龄:* ${escortSession.patientAge || '--'} 岁\n` +
+                `👩‍⚕️ *专属陪诊师:* ${companionName}\n` +
+                `📍 *就诊医院:* ${facility}\n\n` +
+                `${milestoneText}\n` +
+                `📅 *建议复诊日期:* ${escortSession.revisitDate || '暂无/按医嘱'}\n\n` +
+                `📝 *医生诊断及交代事项:* \n${escortSession.doctorNote || '暂无诊断记录'}\n\n` +
+                `🔗 *点击下方链接实时追踪及查看上传单据:* \n${portalLink}\n` +
+                `----------------------------------------\n` +
+                `*专业陪诊，服务至上。愿患者早日康复！*`;
+    } else if (lang === 'bm') {
+      message = `🏥 *Care Connect Hub - Laporan Pengiring Perubatan Masa Nyata* 🏥\n` +
+                `----------------------------------------\n` +
+                `👤 *Pesakit:* ${escortSession.patientName || 'Klien'}\n` +
+                `👤 *Umur:* ${escortSession.patientAge || '--'} Tahun\n` +
+                `👩‍⚕️ *Pengiring:* ${companionName}\n` +
+                `📍 *Hospital/Klinik:* ${facility}\n\n` +
+                `${milestoneText}\n` +
+                `📅 *Cadangan Rujukan Semula:* ${escortSession.revisitDate || 'Tiada'}\n\n` +
+                `📝 *Diagnosis & Arahan Doktor:* \n${escortSession.doctorNote || 'Tiada rekod.'}\n\n` +
+                `🔗 *Klik pautan untuk jejak langsung & lihat dokumen perubatan:* \n${portalLink}\n` +
+                `----------------------------------------\n` +
+                `*Penjagaan Profesional, Ketenangan Jiwa.*`;
+    } else {
+      message = `🏥 *Care Connect Hub - Real-time Outpatient Escort Report* 🏥\n` +
+                `----------------------------------------\n` +
+                `👤 *Patient:* ${escortSession.patientName || 'Client'}\n` +
+                `👤 *Age:* ${escortSession.patientAge || '--'} Yrs\n` +
+                `👩‍⚕️ *Companion:* ${companionName}\n` +
+                `📍 *Facility:* ${facility}\n\n` +
+                `${milestoneText}\n` +
+                `📅 *Recommended Revisit:* ${escortSession.revisitDate || 'TBC'}\n\n` +
+                `📝 *Diagnosis & Directives:* \n${escortSession.doctorNote || 'No notes logged yet.'}\n\n` +
+                `🔗 *Click link to track live & view medical documents:* \n${portalLink}\n` +
+                `----------------------------------------\n` +
+                `*Professional Care, Peace of Mind.*`;
+    }
+    
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   
 
   const submitElderlyContract = (e: React.FormEvent) => {
@@ -1430,7 +1517,7 @@ export default function CaregiverDashboard() {
   return (
     <div className="app-container" style={{ background: 'var(--bg-main)' }}>
       {/* Sidebar with Glassmorphic design */}
-      <aside className="sidebar" style={{ background: 'rgba(15, 23, 42, 0.9)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+      <aside className="sidebar">
         <div style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{
             width: '64px',
@@ -1452,26 +1539,26 @@ export default function CaregiverDashboard() {
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
               />
             ) : (
-              <span style={{ color: 'white', fontSize: '1.8rem', fontWeight: 800 }}>
+              <span style={{ color: 'var(--text-main)', fontSize: '1.8rem', fontWeight: 800 }}>
                 {member ? member.name.split(' ').map((n: string) => n[0]).join('') : 'L'}
               </span>
             )}
           </div>
-          <h4 style={{ color: 'white', fontSize: '1.1rem', margin: 0 }}>{member ? member.name : 'Li Xiulan'}</h4>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {member ? member.member_number : 'MCSA-2026-0009'}</span>
+          <h4 style={{ color: '#ffffff', fontSize: '1.1rem', margin: 0 }}>{member ? member.name : 'Li Xiulan'}</h4>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace' }}>ID: {member ? member.member_number : 'MCSA-2026-0009'}</span>
         </div>
 
         {/* Identity Selector */}
         <div className="form-group" style={{ margin: '0 0 1.5rem 0' }}>
-          <label className="form-label" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Role Identity Segment</label>
+          <label className="form-label" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Role Identity Segment</label>
           <select 
             className="form-input" 
             style={{ 
               padding: '0.5rem', 
               fontSize: '0.85rem', 
-              background: 'rgba(255,255,255,0.04)', 
-              color: 'white', 
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(0,0,0,0.2)', 
+              color: '#ffffff', 
+              border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: '8px',
               cursor: 'pointer'
             }}
@@ -1646,7 +1733,7 @@ export default function CaregiverDashboard() {
                   <ShieldAlert size={24} style={{ color: alertInfo.isExpired ? '#ef4444' : '#f59e0b' }} />
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.05rem', color: '#ffffff', fontWeight: 800 }}>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.05rem', color: 'var(--text-light)', fontWeight: 800 }}>
                     {lang === 'zh' ? (alertInfo.isExpired ? '您的公会会员资格已过期！' : `您的公会会员资格即将到期（剩余 ${alertInfo.daysLeft} 天）`) : 
                      lang === 'bm' ? (alertInfo.isExpired ? 'Keahlian MCSA anda telah tamat tempoh!' : `Keahlian MCSA anda akan tamat (Tinggal ${alertInfo.daysLeft} hari)`) : 
                      (alertInfo.isExpired ? 'Your MCSA Membership has expired!' : `Your MCSA Membership is expiring soon (${alertInfo.daysLeft} days left)`)}
@@ -1667,7 +1754,7 @@ export default function CaregiverDashboard() {
                   border: 'none',
                   borderRadius: '10px',
                   padding: '0.65rem 1.5rem',
-                  color: '#ffffff',
+                  color: 'var(--text-light)',
                   fontWeight: 700,
                   fontSize: '0.9rem',
                   cursor: 'pointer',
@@ -1696,7 +1783,7 @@ export default function CaregiverDashboard() {
                     style={{
                       borderColor: 'rgba(255,255,255,0.15)',
                       background: 'rgba(255,255,255,0.02)',
-                      color: '#ffffff',
+                      color: 'var(--text-light)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',
@@ -1713,7 +1800,7 @@ export default function CaregiverDashboard() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                       Welcome, {member ? member.name.split(' ')[0] : 'Zhang'} Guide! Status: <span style={{ color: 'var(--health)', fontWeight: 'bold' }}>ACTIVE</span>
                     </h2>
                     <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
@@ -1752,7 +1839,7 @@ export default function CaregiverDashboard() {
                       />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.2rem', color: '#ffffff', margin: '0 0 0.25rem 0' }}>
+                      <h3 style={{ fontSize: '1.2rem', color: 'var(--text-light)', margin: '0 0 0.25rem 0' }}>
                         Current Escort: {escortSession.patientName}, {escortSession.patientAge} Years Old
                       </h3>
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
@@ -1783,10 +1870,10 @@ export default function CaregiverDashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {/* Location Card */}
                     <div className="card" style={{ margin: 0, padding: '1.5rem' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.4rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block', marginBottom: '0.4rem' }}>
                         🏥 Hospital Location & Department
                       </span>
-                      <h4 style={{ color: '#ffffff', fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h4 style={{ color: 'var(--text-light)', fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <MapPin size={18} style={{ color: 'var(--primary)' }} /> {escortSession.hospital}
                       </h4>
                       <p style={{ fontSize: '0.88rem', color: 'var(--accent)', fontWeight: 600, margin: '0.4rem 0 0 0', paddingLeft: '1.4rem' }}>
@@ -1797,7 +1884,7 @@ export default function CaregiverDashboard() {
                     {/* Progress Timeline */}
                     <div className="card" style={{ margin: 0, padding: '2rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           ⚡ 实时就医进度轴
                         </h3>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1845,7 +1932,7 @@ export default function CaregiverDashboard() {
                               }}></div>
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <strong style={{ color: isActive ? 'var(--primary)' : isDone ? 'var(--health)' : '#ffffff', fontSize: '0.95rem' }}>
+                                <strong style={{ color: isActive ? 'var(--primary)' : isDone ? 'var(--health)' : 'var(--text-muted)', fontSize: '0.95rem' }}>
                                   {idx + 1}. {step.title} / {step.zh}
                                 </strong>
                                 {isDone && <span style={{ color: 'var(--health)', fontSize: '0.8rem' }}>✓ Completed</span>}
@@ -1886,7 +1973,7 @@ export default function CaregiverDashboard() {
                   {/* Right Column: Doctor's Note & Receipts upload */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div className="card" style={{ margin: 0, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         📋 就医记录与材料上传
                       </h3>
 
@@ -1909,7 +1996,7 @@ export default function CaregiverDashboard() {
                         <input 
                           type="date" 
                           className="form-input" 
-                          style={{ background: 'var(--bg-input)', color: '#ffffff' }}
+                          style={{ background: 'var(--bg-input)', color: 'var(--text-light)' }}
                           value={escortSession.revisitDate}
                           onChange={(e) => handleEscortFieldChange('revisitDate', e.target.value)}
                         />
@@ -1918,8 +2005,8 @@ export default function CaregiverDashboard() {
                       {/* Photo Upload block */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.50rem' }}>
                         <label className="form-label" style={{ margin: 0 }}>PHOTO UPLOAD / 上传单据、处方或药袋</label>
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.4rem' }}>
-                          {[0, 1, 2].map((idx) => {
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.4rem' }}>
+                          {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => {
                             const isUploaded = !!(escortSession.uploadedPhotos && escortSession.uploadedPhotos[idx]);
                             return (
                               <div 
@@ -1954,14 +2041,15 @@ export default function CaregiverDashboard() {
                                     width: '100%',
                                     height: '100%',
                                     borderRadius: '12px',
-                                    border: isUploaded ? '2px solid var(--primary)' : '2px dashed rgba(255,255,255,0.1)',
-                                    background: 'rgba(255,255,255,0.02)',
+                                    border: isUploaded ? '2px solid var(--primary)' : '2px dashed var(--primary)',
+                                    background: 'var(--bg-input)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     cursor: 'pointer',
                                     overflow: 'hidden',
                                     position: 'relative',
+                                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
                                     transition: 'all 0.2s'
                                   }}
                                 >
@@ -1984,7 +2072,7 @@ export default function CaregiverDashboard() {
                                           right: '4px',
                                           background: 'rgba(239, 68, 68, 0.85)',
                                           border: 'none',
-                                          color: 'white',
+                                          color: '#ffffff',
                                           borderRadius: '50%',
                                           width: '18px',
                                           height: '18px',
@@ -2002,7 +2090,10 @@ export default function CaregiverDashboard() {
                                       </button>
                                     </>
                                   ) : (
-                                    <span style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.2)' }}>+</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                      <span style={{ fontSize: '1.4rem', color: 'var(--primary)', fontWeight: 'bold', lineHeight: 1 }}>+</span>
+                                      <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600 }}>{lang === 'zh' ? '添加' : 'Add'}</span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -2023,16 +2114,39 @@ export default function CaregiverDashboard() {
                           className="btn btn-primary"
                           style={{
                             width: '100%',
-                            padding: '1rem',
-                            fontSize: '1rem',
+                            padding: '0.9rem',
+                            fontSize: '0.95rem',
                             background: 'var(--primary)',
                             boxShadow: '0 2px 8px var(--primary-glow)',
                             borderRadius: '8px',
                             fontWeight: 700
                           }}
                         >
-                          🚀 SHARE WITH FAMILY / 一键同步给家属
+                          🚀 SHARE WITH FAMILY / 一键同步至家属端
                         </button>
+                        
+                        <button
+                          onClick={shareEscortViaWhatsApp}
+                          className="btn"
+                          style={{
+                            width: '100%',
+                            padding: '0.9rem',
+                            fontSize: '0.95rem',
+                            background: '#25D366',
+                            color: '#ffffff',
+                            border: 'none',
+                            boxShadow: '0 2px 8px rgba(37, 211, 102, 0.25)',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          💬 SHARE VIA WHATSAPP / 发送报告给家属
+                        </button>
+
                         <button
                           onClick={() => {
                             shareEscortWithFamily();
@@ -2041,8 +2155,8 @@ export default function CaregiverDashboard() {
                           className="btn btn-outline"
                           style={{
                             width: '100%',
-                            padding: '0.9rem',
-                            fontSize: '0.95rem',
+                            padding: '0.85rem',
+                            fontSize: '0.9rem',
                             borderColor: 'var(--accent)',
                             color: 'var(--accent)',
                             borderRadius: '8px',
@@ -2065,7 +2179,7 @@ export default function CaregiverDashboard() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                       {lang === 'zh' ? '照护工作台' : lang === 'bm' ? 'Papan Kerja Penjagaan' : 'Care Dashboard'}
                     </h2>
                     <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
@@ -2082,7 +2196,7 @@ export default function CaregiverDashboard() {
                   <div className="card" style={{ margin: 0, padding: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
                       <CheckSquare size={20} style={{ color: selectedRole === 'maternity' ? '#ec4899' : 'var(--primary)' }} />
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                         {lang === 'zh' ? '今日照护任务清单' : lang === 'bm' ? 'Senarai Semak Tugasan Syif' : 'Shift Tasks Checklist'}
                       </h3>
                     </div>
@@ -2097,10 +2211,10 @@ export default function CaregiverDashboard() {
                             cursor: 'pointer',
                             padding: '0.75rem 1rem',
                             borderRadius: '10px',
-                            background: item.checked ? 'rgba(16,185,129,0.02)' : 'rgba(255,255,255,0.01)',
-                            border: item.checked ? '1px solid rgba(16,185,129,0.15)' : '1px solid rgba(255,255,255,0.04)',
+                            background: item.checked ? 'var(--health-glow)' : 'var(--bg-input)',
+                            border: item.checked ? '1px solid rgba(16,185,129,0.3)' : '1px solid var(--border)',
                             transition: 'all 0.2s',
-                            color: item.checked ? 'var(--text-muted)' : '#ffffff'
+                            color: item.checked ? 'var(--text-muted)' : 'var(--text-main)'
                           }}
                         >
                           <input 
@@ -2127,7 +2241,7 @@ export default function CaregiverDashboard() {
                   <div className="card" style={{ margin: 0, padding: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
                       <Activity size={20} style={{ color: 'var(--accent)' }} />
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                         {lang === 'zh' ? '公开派遣广播 (符合您的资质)' : lang === 'bm' ? 'Siaran Tugasan Kesatuan (Padanan Kelayakan)' : 'Open Union Dispatch Broadcasts (Matching Specialty)'}
                       </h3>
                     </div>
@@ -2162,23 +2276,31 @@ export default function CaregiverDashboard() {
                           <div 
                             key={req.id} 
                             style={{
-                              border: '1px solid rgba(255,255,255,0.06)',
+                              border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)',
                               padding: '1.2rem',
                               borderRadius: '14px',
-                              background: 'rgba(30,41,59,0.3)',
+                              background: 'var(--bg-input)',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '0.75rem',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                              boxShadow: 'var(--shadow-sm)'
                             }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
                               <span style={{ color: 'var(--accent)', fontWeight: 800, fontFamily: 'monospace' }}>{req.id}</span>
                               <span style={{ color: 'var(--text-muted)' }}>📅 {req.date || '2026-06-05'}</span>
                             </div>
-                            <h4 style={{ color: 'white', margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>{req.name}</h4>
+                            <h4 style={{ color: 'var(--text-main)', margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>{req.name}</h4>
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-                              📍 <strong>{lang === 'zh' ? '地点' : lang === 'bm' ? 'Lokasi' : 'Location'}:</strong> {req.location}<br />
+                              📍 <strong>{lang === 'zh' ? '地点' : lang === 'bm' ? 'Lokasi' : 'Location'}:</strong> {req.location || (() => {
+    const msgLower = (req.message || '').toLowerCase();
+    if (msgLower.includes('puchong')) return 'Puchong';
+    if (msgLower.includes('pj') || msgLower.includes('petaling jaya')) return 'Petaling Jaya';
+    if (msgLower.includes('cheras')) return 'Cheras';
+    if (msgLower.includes('ampang')) return 'Ampang';
+    if (msgLower.includes('kl') || msgLower.includes('kuala lumpur')) return 'Kuala Lumpur';
+    return lang === 'zh' ? '见详细要求' : lang === 'bm' ? 'Rujuk keperluan' : 'Refer to details';
+  })()}<br />
                               💼 <strong>{lang === 'zh' ? '类别' : lang === 'bm' ? 'Kategori' : 'Category'}:</strong> {req.category}<br />
                               📝 <strong>{lang === 'zh' ? '要求' : lang === 'bm' ? 'Keperluan' : 'Needs'}:</strong> {req.message}
                             </p>
@@ -2192,7 +2314,15 @@ export default function CaregiverDashboard() {
                                     date: shiftDate,
                                     time: '09:00 AM',
                                     clientName: req.name,
-                                    location: req.location,
+                                    location: req.location || (() => {
+    const msgLower = (req.message || '').toLowerCase();
+    if (msgLower.includes('puchong')) return 'Puchong';
+    if (msgLower.includes('pj') || msgLower.includes('petaling jaya')) return 'Petaling Jaya';
+    if (msgLower.includes('cheras')) return 'Cheras';
+    if (msgLower.includes('ampang')) return 'Ampang';
+    if (msgLower.includes('kl') || msgLower.includes('kuala lumpur')) return 'Kuala Lumpur';
+    return 'Kuala Lumpur';
+  })(),
                                     details: req.message,
                                     status: 'Scheduled'
                                   };
@@ -2230,11 +2360,11 @@ export default function CaregiverDashboard() {
                 </div>
 
                 {/* Daily Care Photo Gallery Card */}
-                <div className="card animate-fade-in" style={{ marginTop: '2rem', padding: '2rem', background: 'rgba(15,23,42,0.4)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                <div className="card animate-fade-in" style={{ marginTop: '2rem', padding: '2rem', background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <Activity size={20} style={{ color: selectedRole === 'maternity' ? '#ec4899' : 'var(--primary)' }} />
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                         {lang === 'zh' ? '📸 每日照护相册' : lang === 'bm' ? '📸 Galeri Gambar Penjagaan Harian' : '📸 Daily Care Photo Gallery'}
                       </h3>
                     </div>
@@ -2283,11 +2413,11 @@ export default function CaregiverDashboard() {
                     if (validPhotos.length === 0) {
                       return (
                         <div style={{ 
-                          border: '2px dashed rgba(255,255,255,0.06)',
+                          border: '2px dashed var(--border)',
                           borderRadius: '12px',
                           padding: '2.5rem',
                           textAlign: 'center',
-                          background: 'rgba(255,255,255,0.01)'
+                          background: 'var(--bg-input)'
                         }}>
                           <span style={{ fontSize: '2rem', display: 'block', marginBottom: '0.5rem' }}>📸</span>
                           <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: 0 }}>
@@ -2307,7 +2437,7 @@ export default function CaregiverDashboard() {
                               aspectRatio: '1',
                               borderRadius: '12px',
                               overflow: 'hidden',
-                              border: '1px solid rgba(255,255,255,0.08)',
+                              border: '1px solid var(--border)',
                               boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                               cursor: 'pointer'
                             }}
@@ -2338,7 +2468,7 @@ export default function CaregiverDashboard() {
                                 right: '8px',
                                 background: 'rgba(239, 68, 68, 0.85)',
                                 border: 'none',
-                                color: 'white',
+                                color: 'var(--text-main)',
                                 borderRadius: '50%',
                                 width: '22px',
                                 height: '22px',
@@ -2370,7 +2500,7 @@ export default function CaregiverDashboard() {
                 {/* Header Banner */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                       {lang === 'zh' ? '日常排班日程' : lang === 'bm' ? 'Jadual Harian' : 'Daily Schedule'}
                     </h2>
                     <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
@@ -2401,10 +2531,10 @@ export default function CaregiverDashboard() {
 
                 <div className="calendar-layout-grid">
                   {/* Calendar Matrix Card */}
-                  <div className="card" style={{ margin: 0, padding: '1.5rem', background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="card" style={{ margin: 0, padding: '1.5rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                     {/* Month Picker / Year Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#ffffff', fontWeight: 700, fontFamily: 'Outfit' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-light)', fontWeight: 700, fontFamily: 'Outfit' }}>
                         {(() => {
                           const monthNames: Record<string, string[]> = {
                             en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -2418,21 +2548,21 @@ export default function CaregiverDashboard() {
                         <button 
                           onClick={handlePrevMonth}
                           className="btn btn-outline" 
-                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer' }}
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px', borderColor: 'var(--border)', color: 'var(--text-main)', cursor: 'pointer' }}
                         >
                           ◀
                         </button>
                         <button 
                           onClick={handleGoToToday}
                           className="btn btn-outline" 
-                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px', borderColor: 'var(--border)', color: 'var(--text-main)', fontWeight: 700, cursor: 'pointer' }}
                         >
                           {lang === 'zh' ? '今天' : lang === 'bm' ? 'Hari Ini' : 'Today'}
                         </button>
                         <button 
                           onClick={handleNextMonth}
                           className="btn btn-outline" 
-                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer' }}
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', borderRadius: '8px', borderColor: 'var(--border)', color: 'var(--text-main)', cursor: 'pointer' }}
                         >
                           ▶
                         </button>
@@ -2449,7 +2579,7 @@ export default function CaregiverDashboard() {
                         };
                         return dayInitials[lang] || dayInitials.en;
                       })().map((d: string, idx: number) => (
-                        <span key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, paddingBottom: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <span key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 700, paddingBottom: '0.6rem', borderBottom: '1px solid var(--border)' }}>
                           {d}
                         </span>
                       ))}
@@ -2495,12 +2625,16 @@ export default function CaregiverDashboard() {
                             onClick={() => setSelectedDateStr(dayStr)}
                             style={{
                               aspectRatio: '1/1',
-                              background: isSelected ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.01)',
+                              background: isSelected 
+                                ? accentColor 
+                                : isToday 
+                                  ? 'var(--primary-light)' 
+                                  : 'var(--bg-input)',
                               border: isSelected 
                                 ? `2.5px solid ${accentColor}` 
                                 : isToday 
-                                  ? '2px solid rgba(245,158,11,0.6)' 
-                                  : '1px solid rgba(255,255,255,0.04)',
+                                  ? '2px solid var(--accent)' 
+                                  : '1px solid var(--border)',
                               borderRadius: '12px',
                               display: 'flex',
                               flexDirection: 'column',
@@ -2511,14 +2645,18 @@ export default function CaregiverDashboard() {
                               outline: 'none',
                               position: 'relative',
                               transition: 'all 0.2s ease-in-out',
-                              boxShadow: isSelected ? `0 0 12px ${glowShadow}` : 'none'
+                              boxShadow: isSelected ? `0 4px 12px ${glowShadow}` : 'none'
                             }}
                           >
                             {/* Day digit */}
                             <span style={{ 
                               fontSize: '0.95rem', 
                               fontWeight: isSelected || isToday ? 800 : 500, 
-                              color: isToday ? '#f59e0b' : isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)',
+                              color: isSelected 
+                                ? '#ffffff' 
+                                : isToday 
+                                  ? 'var(--accent-dark)' 
+                                  : 'var(--text-main)',
                               marginTop: '0.1rem'
                             }}>
                               {dayNum}
@@ -2546,9 +2684,9 @@ export default function CaregiverDashboard() {
                   </div>
 
                   {/* Sidebar Schedule Details List */}
-                  <div className="card" style={{ margin: 0, padding: '1.5rem', minHeight: '350px', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="card" style={{ margin: 0, padding: '1.5rem', minHeight: '350px', display: 'flex', flexDirection: 'column', gap: '1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                         📅 {selectedDateStr}
                       </h3>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -2572,232 +2710,240 @@ export default function CaregiverDashboard() {
                           </button>
                         </div>
                       ) : (
-                        calendarAppointments.filter(a => a.date === selectedDateStr && a.role === selectedRole).map((appt) => (
-                          <div 
-                            key={appt.id} 
-                            style={{
-                              background: 'rgba(30, 41, 59, 0.5)',
-                              border: '1px solid rgba(255, 255, 255, 0.06)',
-                              borderRadius: '14px',
-                              padding: '1.2rem',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '0.85rem',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.85rem', color: '#60a5fa', fontWeight: 800, fontFamily: 'monospace' }}>
-                                🕒 {appt.time}
-                              </span>
-                              <span style={{
-                                fontSize: '0.72rem',
-                                padding: '0.25rem 0.6rem',
-                                borderRadius: '8px',
-                                fontWeight: 800,
-                                background: appt.status === 'Completed' 
-                                  ? 'rgba(16,185,129,0.15)' 
-                                  : appt.status === 'In Progress' 
-                                    ? 'rgba(37,99,235,0.15)' 
-                                    : 'rgba(245,158,11,0.15)',
-                                color: appt.status === 'Completed' 
-                                  ? '#10b981' 
-                                  : appt.status === 'In Progress' 
-                                    ? '#3b82f6' 
-                                    : '#f59e0b'
-                              }}>
-                                {appt.status === 'Completed' 
-                                  ? (lang === 'zh' ? '已完成' : lang === 'bm' ? 'Selesai' : 'Completed') 
-                                  : appt.status === 'In Progress' 
-                                    ? (lang === 'zh' ? '进行中' : lang === 'bm' ? 'Aktif' : 'In Progress') 
-                                    : (lang === 'zh' ? '已安排' : lang === 'bm' ? 'Dijadualkan' : 'Scheduled')}
-                              </span>
-                            </div>
+                        calendarAppointments.filter(a => a.date === selectedDateStr && a.role === selectedRole).map((appt) => {
+                          const cardBg = appt.role === 'maternity' ? '#f0fdf4' : appt.role === 'escort' ? '#fffbeb' : appt.role === 'elderly' ? '#f0fbfb' : 'var(--bg-input)';
+                          const cardBorderColor = appt.role === 'maternity' ? '#dcfce7' : appt.role === 'escort' ? '#fef3c7' : appt.role === 'elderly' ? '#ccfbf1' : 'var(--border)';
+                          const leftBorderColor = appt.role === 'maternity' ? '#10b981' : appt.role === 'escort' ? '#f59e0b' : appt.role === 'elderly' ? '#0abab5' : 'var(--primary)';
+                          const timeColor = appt.role === 'maternity' ? '#047857' : appt.role === 'escort' ? '#b45309' : appt.role === 'elderly' ? '#088c87' : 'var(--primary-dark)';
+                          return (
+                            <div 
+                              key={appt.id} 
+                              style={{
+                                background: cardBg,
+                                border: `1px solid ${cardBorderColor}`,
+                                borderLeft: `5px solid ${leftBorderColor}`,
+                                borderRadius: '14px',
+                                padding: '1.2rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.85rem',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.01)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.85rem', color: timeColor, fontWeight: 800, fontFamily: 'monospace' }}>
+                                  🕒 {appt.time}
+                                </span>
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  padding: '0.25rem 0.6rem',
+                                  borderRadius: '8px',
+                                  fontWeight: 800,
+                                  background: appt.status === 'Completed' 
+                                    ? 'rgba(16,185,129,0.15)' 
+                                    : appt.status === 'In Progress' 
+                                      ? 'rgba(37,99,235,0.15)' 
+                                      : 'rgba(245,158,11,0.15)',
+                                  color: appt.status === 'Completed' 
+                                    ? '#10b981' 
+                                    : appt.status === 'In Progress' 
+                                      ? '#3b82f6' 
+                                      : '#f59e0b'
+                                }}>
+                                  {appt.status === 'Completed' 
+                                    ? (lang === 'zh' ? '已完成' : lang === 'bm' ? 'Selesai' : 'Completed') 
+                                    : appt.status === 'In Progress' 
+                                      ? (lang === 'zh' ? '进行中' : lang === 'bm' ? 'Aktif' : 'In Progress') 
+                                      : (lang === 'zh' ? '已安排' : lang === 'bm' ? 'Dijadualkan' : 'Scheduled')}
+                                </span>
+                              </div>
 
-                            {(() => {
-                              const phone = appt.clientPhone || (
-                                appt.clientName.includes('Zhang') || appt.clientName.includes('张') ? '012-345 6789' :
-                                appt.clientName.includes('Wang') || appt.clientName.includes('王') ? '017-665 4321' :
-                                appt.clientName.includes('Aminah') ? '019-876 5432' :
-                                appt.clientName.includes('Tan') ? '011-234 5678' :
-                                appt.clientName.includes('Lim') ? '016-789 1234' :
-                                appt.clientName.includes('Chen') ? '012-987 6543' :
-                                appt.clientName.includes('Siti') ? '013-456 7890' :
-                                appt.clientName.includes('Wong') ? '018-765 4321' :
-                                appt.clientName.includes('Lee') ? '014-321 0987' :
-                                appt.clientName.includes('Loke') ? '015-678 9012' :
-                                appt.clientName.includes('Fatimah') ? '017-890 1234' :
-                                '012-345 6789'
-                              );
-                              const email = appt.clientEmail || (
-                                appt.clientName.includes('Zhang') || appt.clientName.includes('张') ? 'zhang@mcsa.com.my' :
-                                appt.clientName.includes('Wang') || appt.clientName.includes('王') ? 'wang@mcsa.com.my' :
-                                appt.clientName.includes('Aminah') ? 'aminah@mcsa.com.my' :
-                                appt.clientName.includes('Tan') ? 'tan@mcsa.com.my' :
-                                appt.clientName.includes('Lim') ? 'lim@mcsa.com.my' :
-                                appt.clientName.includes('Chen') ? 'chen@mcsa.com.my' :
-                                appt.clientName.includes('Siti') ? 'siti@mcsa.com.my' :
-                                appt.clientName.includes('Wong') ? 'wong@mcsa.com.my' :
-                                appt.clientName.includes('Lee') ? 'lee@mcsa.com.my' :
-                                appt.clientName.includes('Loke') ? 'loke@mcsa.com.my' :
-                                appt.clientName.includes('Fatimah') ? 'fatimah@mcsa.com.my' :
-                                'client@mcsa.com.my'
-                              );
-                              return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                                  <span style={{ fontSize: '1.05rem', color: '#ffffff', fontWeight: 800 }}>
-                                    {appt.clientName}
-                                  </span>
-                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                                    📍 {appt.location || 'Kuala Lumpur'}
-                                  </span>
-                                  <div style={{ fontSize: '0.8rem', color: 'var(--accent)', display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.15rem' }}>
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
-                                      📞 {lang === 'zh' ? '电话: ' : lang === 'bm' ? 'Tel: ' : 'Phone: '}{phone}
+                              {(() => {
+                                const phone = appt.clientPhone || (
+                                  appt.clientName.includes('Zhang') || appt.clientName.includes('张') ? '012-345 6789' :
+                                  appt.clientName.includes('Wang') || appt.clientName.includes('王') ? '017-665 4321' :
+                                  appt.clientName.includes('Aminah') ? '019-876 5432' :
+                                  appt.clientName.includes('Tan') ? '011-234 5678' :
+                                  appt.clientName.includes('Lim') ? '016-789 1234' :
+                                  appt.clientName.includes('Chen') ? '012-987 6543' :
+                                  appt.clientName.includes('Siti') ? '013-456 7890' :
+                                  appt.clientName.includes('Wong') ? '018-765 4321' :
+                                  appt.clientName.includes('Lee') ? '014-321 0987' :
+                                  appt.clientName.includes('Loke') ? '015-678 9012' :
+                                  appt.clientName.includes('Fatimah') ? '017-890 1234' :
+                                  '012-345 6789'
+                                );
+                                const email = appt.clientEmail || (
+                                  appt.clientName.includes('Zhang') || appt.clientName.includes('张') ? 'zhang@mcsa.com.my' :
+                                  appt.clientName.includes('Wang') || appt.clientName.includes('王') ? 'wang@mcsa.com.my' :
+                                  appt.clientName.includes('Aminah') ? 'aminah@mcsa.com.my' :
+                                  appt.clientName.includes('Tan') ? 'tan@mcsa.com.my' :
+                                  appt.clientName.includes('Lim') ? 'lim@mcsa.com.my' :
+                                  appt.clientName.includes('Chen') ? 'chen@mcsa.com.my' :
+                                  appt.clientName.includes('Siti') ? 'siti@mcsa.com.my' :
+                                  appt.clientName.includes('Wong') ? 'wong@mcsa.com.my' :
+                                  appt.clientName.includes('Lee') ? 'lee@mcsa.com.my' :
+                                  appt.clientName.includes('Loke') ? 'loke@mcsa.com.my' :
+                                  appt.clientName.includes('Fatimah') ? 'fatimah@mcsa.com.my' :
+                                  'client@mcsa.com.my'
+                                );
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                    <span style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: 800 }}>
+                                      {appt.clientName}
                                     </span>
-                                    {email && (
-                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#94a3b8' }}>
-                                        ✉️ {lang === 'zh' ? '邮箱: ' : lang === 'bm' ? 'E-mel: ' : 'Email: '}{email}
+                                    <span style={{ fontSize: '0.8rem', color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                      📍 {appt.location || 'Kuala Lumpur'}
+                                    </span>
+                                    <div style={{ fontSize: '0.8rem', color: '#1e293b', display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.15rem' }}>
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                                        📞 {lang === 'zh' ? '电话: ' : lang === 'bm' ? 'Tel: ' : 'Phone: '}{phone}
                                       </span>
-                                    )}
+                                      {email && (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#475569' }}>
+                                          ✉️ {lang === 'zh' ? '邮箱: ' : lang === 'bm' ? 'E-mel: ' : 'Email: '}{email}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })()}
+                                );
+                              })()}
 
-                            {appt.details && (
-                              <p style={{ margin: 0, fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)', background: 'rgba(255,255,255,0.02)', padding: '0.6rem 0.85rem', borderRadius: '8px', borderLeft: '3.5px solid var(--primary)', lineHeight: 1.4 }}>
-                                {appt.details}
-                              </p>
-                            )}
-
-                            {/* Appointment Action Buttons */}
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                              {appt.role === 'escort' && (
-                                <button
-                                  onClick={() => openEscortTrackerForAppt(appt)}
-                                  className="btn btn-primary"
-                                  style={{ flex: 1.5, padding: '0.5rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', cursor: 'pointer' }}
-                                >
-                                  ⚡ {lang === 'zh' ? '开启就医追踪' : lang === 'bm' ? 'Jejak Pengiring' : 'Open Live Tracker'}
-                                </button>
+                              {appt.details && (
+                                <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155', background: '#ffffff', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0', borderLeft: `3.5px solid ${leftBorderColor}`, lineHeight: 1.4 }}>
+                                  {appt.details}
+                                </p>
                               )}
 
-                              {appt.role === 'maternity' && (
-                                <button
-                                  onClick={() => setActiveTab('maternity')}
-                                  className="btn btn-primary"
-                                  style={{ flex: 1.5, padding: '0.5rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', background: 'var(--health)', border: 'none', color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', cursor: 'pointer' }}
-                                >
-                                  🍼 {lang === 'zh' ? '母婴护理日志' : lang === 'bm' ? 'Buka Log Materniti' : 'Maternity Care Log'}
-                                </button>
-                              )}
+                              {/* Appointment Action Buttons */}
+                              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                                {appt.role === 'escort' && (
+                                  <button
+                                    onClick={() => openEscortTrackerForAppt(appt)}
+                                    className="btn btn-primary"
+                                    style={{ flex: 1.5, padding: '0.5rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', background: 'var(--primary)', border: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', cursor: 'pointer' }}
+                                  >
+                                    ⚡ {lang === 'zh' ? '开启就医追踪' : lang === 'bm' ? 'Jejak Pengiring' : 'Open Live Tracker'}
+                                  </button>
+                                )}
 
-                              {appt.role === 'elderly' && (
-                                <button
-                                  onClick={() => setActiveTab('vitals')}
-                                  className="btn btn-primary"
-                                  style={{ flex: 1.5, padding: '0.5rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', cursor: 'pointer' }}
-                                >
-                                  👴 {lang === 'zh' ? '长者护理日志' : lang === 'bm' ? 'Buka Log Warga Emas' : 'Senior Care Log'}
-                                </button>
-                              )}
+                                {appt.role === 'maternity' && (
+                                  <button
+                                    onClick={() => setActiveTab('maternity')}
+                                    className="btn btn-primary"
+                                    style={{ flex: 1.5, padding: '0.5rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', background: 'var(--health)', color: '#ffffff', border: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', cursor: 'pointer' }}
+                                  >
+                                    🍼 {lang === 'zh' ? '母婴护理日志' : lang === 'bm' ? 'Buka Log Materniti' : 'Maternity Care Log'}
+                                  </button>
+                                )}
 
-                              {appt.status === 'Completed' && (
-                                <button
-                                  onClick={() => openReceiptGenerator(appt)}
-                                  className="btn btn-outline"
+                                {appt.role === 'elderly' && (
+                                  <button
+                                    onClick={() => setActiveTab('vitals')}
+                                    className="btn btn-primary"
+                                    style={{ flex: 1.5, padding: '0.5rem 0.75rem', fontSize: '0.8rem', borderRadius: '8px', background: 'var(--primary)', color: '#ffffff', border: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', cursor: 'pointer' }}
+                                  >
+                                    👴 {lang === 'zh' ? '长者护理日志' : lang === 'bm' ? 'Buka Log Warga Emas' : 'Senior Care Log'}
+                                  </button>
+                                )}
+
+                                {appt.status === 'Completed' && (
+                                  <button
+                                    onClick={() => openReceiptGenerator(appt)}
+                                    className="btn btn-outline"
+                                    style={{
+                                      flex: 1.5,
+                                      padding: '0.5rem 0.75rem',
+                                      fontSize: '0.8rem',
+                                      borderRadius: '8px',
+                                      borderColor: 'var(--accent)',
+                                      color: 'var(--accent)',
+                                      fontWeight: 700,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.25rem',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    🧾 {lang === 'zh' ? '开具报税收据' : lang === 'bm' ? 'Resit Cukai' : 'Tax Receipt'}
+                                  </button>
+                                )}
+
+                                {/* Status Toggler Select */}
+                                <select
+                                  value={appt.status}
+                                  onChange={(e) => updateApptStatus(appt.id, e.target.value)}
                                   style={{
-                                    flex: 1.5,
-                                    padding: '0.5rem 0.75rem',
-                                    fontSize: '0.8rem',
+                                    flex: 1.2,
+                                    background: '#ffffff',
+                                    border: '1px solid #cbd5e1',
+                                    color: '#0f172a',
                                     borderRadius: '8px',
-                                    borderColor: 'var(--accent)',
-                                    color: 'var(--accent)',
-                                    fontWeight: 700,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.25rem',
-                                    cursor: 'pointer'
+                                    padding: '0.45rem 0.6rem',
+                                    fontSize: '0.78rem',
+                                    cursor: 'pointer',
+                                    outline: 'none',
+                                    fontWeight: 600
                                   }}
                                 >
-                                  🧾 {lang === 'zh' ? '开具报税收据' : lang === 'bm' ? 'Resit Cukai' : 'Tax Receipt'}
-                                </button>
-                              )}
+                                  <option value="Scheduled" style={{ color: 'black' }}>{lang === 'zh' ? '已安排' : lang === 'bm' ? 'Dijadual' : 'Scheduled'}</option>
+                                  <option value="In Progress" style={{ color: 'black' }}>{lang === 'zh' ? '进行中' : lang === 'bm' ? 'Aktif' : 'In Progress'}</option>
+                                  <option value="Completed" style={{ color: 'black' }}>{lang === 'zh' ? '已完成' : lang === 'bm' ? 'Selesai' : 'Completed'}</option>
+                                </select>
 
-                              {/* Status Toggler Select */}
-                              <select
-                                value={appt.status}
-                                onChange={(e) => updateApptStatus(appt.id, e.target.value)}
-                                style={{
-                                  flex: 1.2,
-                                  background: 'rgba(255,255,255,0.06)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255,255,255,0.12)',
-                                  borderRadius: '8px',
-                                  padding: '0.45rem 0.6rem',
-                                  fontSize: '0.78rem',
-                                  cursor: 'pointer',
-                                  outline: 'none'
-                                }}
-                              >
-                                <option value="Scheduled" style={{ color: 'black' }}>{lang === 'zh' ? '已安排' : lang === 'bm' ? 'Dijadual' : 'Scheduled'}</option>
-                                <option value="In Progress" style={{ color: 'black' }}>{lang === 'zh' ? '进行中' : lang === 'bm' ? 'Aktif' : 'In Progress'}</option>
-                                <option value="Completed" style={{ color: 'black' }}>{lang === 'zh' ? '已完成' : lang === 'bm' ? 'Selesai' : 'Completed'}</option>
-                              </select>
-
-                              <button
-                                type="button"
-                                onClick={() => openAdjustScheduleModal(appt)}
-                                className="btn btn-outline"
-                                style={{
-                                  flex: 1.2,
-                                  padding: '0.45rem 0.6rem',
-                                  fontSize: '0.78rem',
-                                  borderRadius: '8px',
-                                  borderColor: 'rgba(255,255,255,0.2)',
-                                  color: '#cbd5e1',
-                                  fontWeight: 700,
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.25rem',
-                                  cursor: 'pointer',
-                                  background: 'rgba(255,255,255,0.03)'
-                                }}
-                              >
-                                ✏️ {lang === 'zh' ? '调整日程' : lang === 'bm' ? 'Ubah Tarikh' : 'Adjust Date'}
-                              </button>
-
-                              {appt.status !== 'Completed' && (
                                 <button
                                   type="button"
-                                  onClick={() => handleReleaseCase(appt)}
+                                  onClick={() => openAdjustScheduleModal(appt)}
                                   className="btn btn-outline"
                                   style={{
-                                    flex: '1 1 100%',
+                                    flex: 1.2,
                                     padding: '0.45rem 0.6rem',
                                     fontSize: '0.78rem',
                                     borderRadius: '8px',
-                                    borderColor: '#ef4444',
-                                    color: '#ef4444',
+                                    borderColor: '#cbd5e1',
+                                    color: '#0f172a',
                                     fontWeight: 700,
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: '0.25rem',
                                     cursor: 'pointer',
-                                    background: 'rgba(239, 68, 68, 0.05)',
-                                    marginTop: '0.25rem'
+                                    background: '#ffffff'
                                   }}
                                 >
-                                  🔓 {lang === 'zh' ? '释放退单 / 重新放回公开匹配池' : lang === 'bm' ? 'Lepaskan Syif (Batal)' : 'Release Case / Return to Pool'}
+                                  ✏️ {lang === 'zh' ? '调整日程' : lang === 'bm' ? 'Ubah Tarikh' : 'Adjust Date'}
                                 </button>
-                              )}
+
+                                {appt.status !== 'Completed' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReleaseCase(appt)}
+                                    className="btn btn-outline"
+                                    style={{
+                                      flex: '1 1 100%',
+                                      padding: '0.45rem 0.6rem',
+                                      fontSize: '0.78rem',
+                                      borderRadius: '8px',
+                                      borderColor: '#ef4444',
+                                      color: '#ef4444',
+                                      fontWeight: 700,
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '0.25rem',
+                                      cursor: 'pointer',
+                                      background: 'rgba(239, 68, 68, 0.05)',
+                                      marginTop: '0.25rem'
+                                    }}
+                                  >
+                                    🔓 {lang === 'zh' ? '释放退单 / 重新放回公开匹配池' : lang === 'bm' ? 'Lepaskan Syif (Batal)' : 'Release Case / Return to Pool'}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -2808,14 +2954,13 @@ export default function CaregiverDashboard() {
 
 
         {activeTab === 'vitals' && (
-          <div className="animate-fade-in" style={{ color: '#f8fafc' }}>
+          <div className="animate-fade-in" style={{ color: 'var(--text-main)' }}>
             {/* Senior Care Hub Header */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: 'linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(30,41,59,0.7) 100%)',
-              border: '1px solid rgba(37,99,235,0.2)',
+              background: 'linear-gradient(135deg, var(--primary-glow) 0%, var(--bg-card) 100%)', border: '1px solid var(--border)',
               borderRadius: '20px',
               padding: '1.25rem 2rem',
               marginBottom: '2rem',
@@ -2833,10 +2978,10 @@ export default function CaregiverDashboard() {
                   justifyContent: 'center',
                   boxShadow: '0 4px 12px rgba(37,99,235,0.2)'
                 }}>
-                  <User size={24} style={{ color: 'white' }} />
+                  <User size={24} style={{ color: 'var(--text-main)' }} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '1.35rem', color: '#ffffff', margin: 0, fontWeight: 700, fontFamily: 'Outfit' }}>
+                  <h2 style={{ fontSize: '1.35rem', color: 'var(--text-light)', margin: 0, fontWeight: 700, fontFamily: 'Outfit' }}>
                     {isRehab ? 'Rehabilitation & Care Management - Caregiver Backend' : 'Senior Health & Care Management - Caregiver Backend'}
                   </h2>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -2847,8 +2992,8 @@ export default function CaregiverDashboard() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
-                  background: 'rgba(15,23,42,0.5)',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'var(--bg-input)', border: '1px solid var(--border)',
+                  border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)',
                   padding: '0.4rem 1rem',
                   borderRadius: '12px',
                   display: 'flex',
@@ -2883,7 +3028,7 @@ export default function CaregiverDashboard() {
               
               {/* Card 1: Medication Tracker */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid var(--primary)' }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   💊 Medication Tracker / 药品服药管理
                 </h3>
                 
@@ -2895,7 +3040,7 @@ export default function CaregiverDashboard() {
                         className="form-input" 
                         value={medTime} 
                         onChange={(e) => setMedTime(e.target.value)}
-                        style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
+                        style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }}
                       >
                         <option value="08:00 AM">08:00 AM</option>
                         <option value="12:00 PM">12:00 PM</option>
@@ -2962,7 +3107,7 @@ export default function CaregiverDashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto', paddingRight: '0.25rem' }}>
                     {(elderSession.medications && elderSession.medications.length > 0) ? (
                       elderSession.medications.map((med: any) => (
-                        <div key={med.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}>
+                        <div key={med.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-input)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <button
                               type="button"
@@ -2983,7 +3128,7 @@ export default function CaregiverDashboard() {
                               {med.administered ? <Check size={14} /> : <X size={14} />}
                             </button>
                             <div>
-                              <strong style={{ color: 'white' }}>{med.name} ({med.dose})</strong>
+                              <strong style={{ color: 'var(--text-main)' }}>{med.name} ({med.dose})</strong>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>🕒 {med.time}</span>
                             </div>
                           </div>
@@ -3005,7 +3150,7 @@ export default function CaregiverDashboard() {
 
               {/* Card 2: Daily Risk Assessment */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <h3 style={{ fontSize: '1.2rem', margin: 0, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   📋 Daily Risk Assessment / 每日照护评估
                 </h3>
                 
@@ -3110,7 +3255,7 @@ export default function CaregiverDashboard() {
 
               {/* Card 3: Vital Signs Monitor */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid var(--health)' }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   🩺 Vital Signs Monitor / 生命体征监测
                 </h3>
 
@@ -3156,7 +3301,7 @@ export default function CaregiverDashboard() {
                           className="form-input"
                           value={elderSugarType}
                           onChange={(e) => setElderSugarType(e.target.value)}
-                          style={{ flex: 1, padding: '0.4rem 0.25rem', fontSize: '0.75rem', background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
+                          style={{ flex: 1, padding: '0.4rem 0.25rem', fontSize: '0.75rem', background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }}
                         >
                           <option value="Fasting">Fasting</option>
                           <option value="Post-Meal">Post-Meal</option>
@@ -3180,7 +3325,7 @@ export default function CaregiverDashboard() {
                     </div>
                   </div>
 
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', background: 'var(--health)', border: 'none', color: 'white' }}>
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', background: 'var(--health)', border: 'none', color: 'var(--text-main)' }}>
                     ⚡ Log Vital Signs / 录入更新体征数据
                   </button>
                 </form>
@@ -3189,7 +3334,7 @@ export default function CaregiverDashboard() {
               {/* Card 4: Activities & Rota */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid var(--accent)', gridColumn: '1 / -1' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <h3 style={{ fontSize: '1.2rem', margin: 0, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     🚶 Activities & Rota / 日常起居照护与活动计划
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -3207,7 +3352,7 @@ export default function CaregiverDashboard() {
                         style={{ 
                           padding: '1rem', 
                           borderRadius: '12px', 
-                          background: act.checked ? 'rgba(16,185,129,0.02)' : isBathing ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.01)', 
+                          background: act.checked ? 'var(--health-glow)' : isBathing ? 'var(--accent-glow)' : 'var(--bg-input)', 
                           border: act.checked ? '1px solid rgba(16,185,129,0.2)' : isBathing ? '1.5px solid var(--accent)' : '1px solid rgba(255,255,255,0.04)',
                           boxShadow: isBathing && !act.checked ? '0 0 12px rgba(245,158,11,0.1)' : 'none'
                         }}
@@ -3221,7 +3366,7 @@ export default function CaregiverDashboard() {
                             style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--health)' }}
                           />
                         </div>
-                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'white', fontSize: '0.92rem', fontWeight: 700 }}>
+                        <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '0.92rem', fontWeight: 700 }}>
                           {act.title}
                         </h4>
                         <input 
@@ -3270,7 +3415,7 @@ export default function CaregiverDashboard() {
             </div>
 
             {/* Bottom Actions Toolbar */}
-            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'flex-start', background: 'rgba(15,23,42,0.4)', padding: '1.25rem 2rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'flex-start', background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem 2rem', borderRadius: '16px', border: '1px solid var(--border)' }}>
               <button 
                 onClick={() => {
                   const title = prompt('Enter custom event title:');
@@ -3338,9 +3483,9 @@ export default function CaregiverDashboard() {
                 zIndex: 100,
                 padding: '2rem'
               }}>
-                <div className="card animate-fade-in" style={{ maxWidth: '680px', width: '100%', padding: '2.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem' }}>
-                    <h3 style={{ margin: 0, color: 'white' }}>📈 Senior Vital Signs Monitor Vitals Trend Charts</h3>
+                <div className="card animate-fade-in" style={{ maxWidth: '680px', width: '100%', padding: '2.5rem', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                    <h3 style={{ margin: 0, color: 'var(--text-main)' }}>📈 Senior Vital Signs Monitor Vitals Trend Charts</h3>
                     <button 
                       onClick={() => setShowElderChartsModal(false)}
                       style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}
@@ -3354,7 +3499,7 @@ export default function CaregiverDashboard() {
                     <h4 style={{ color: 'var(--primary)', fontSize: '0.92rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       🟡 Blood Pressure Trends / 血压健康走势比对 (mmHg)
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--bg-input)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
                       {[
                         { label: 'Systolic BP (收缩压) - Currently logged', val: Number(elderSession.vitals?.bp?.split('/')[0] || 128), color: '#3b82f6', max: 180, normal: 120 },
                         { label: 'Diastolic BP (舒张压) - Currently logged', val: Number(elderSession.vitals?.bp?.split('/')[1] || 82), color: '#10b981', max: 110, normal: 80 }
@@ -3377,7 +3522,7 @@ export default function CaregiverDashboard() {
                     <h4 style={{ color: 'var(--health)', fontSize: '0.92rem', marginBottom: '0.8rem' }}>
                       🩸 Blood Sugar Analysis / 血糖健康波动比对 (mmol/L)
                     </h4>
-                    <div style={{ background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
                       <div style={{ display: 'flex', gap: '1rem', height: '120px', alignItems: 'flex-end', justifyContent: 'space-around', paddingTop: '1rem', borderBottom: '1.5px solid rgba(255,255,255,0.1)' }}>
                         {[
                           { day: '6/1 (Fasting)', vol: 5.8, height: '65px' },
@@ -3441,7 +3586,7 @@ export default function CaregiverDashboard() {
                     </div>
 
                     {/* Vitals */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Vital Signs Monitor / 生命体征数据</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Vital Signs Monitor / 生命体征数据</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <li>Blood Pressure: <strong>{elderSession.vitals?.bp || '128/82'} mmHg</strong></li>
                       <li>Blood Sugar: <strong>{elderSession.vitals?.bloodSugar || '6.2'} mmol/L</strong> ({elderSession.vitals?.sugarType || 'Fasting'})</li>
@@ -3449,7 +3594,7 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Risk Assessments */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Risk Assessment Indicators / 临床照护评估</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Risk Assessment Indicators / 临床照护评估</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <li>Fall Risk: <strong style={{ color: elderSession.risks?.fallRisk === 'High' ? '#ef4444' : '#f59e0b' }}>{elderSession.risks?.fallRisk || 'Medium'}</strong></li>
                       <li>Bedsores ulcer warning: <strong style={{ color: elderSession.risks?.bedsores === 'None' ? '#10b981' : '#ef4444' }}>{elderSession.risks?.bedsores || 'None'}</strong></li>
@@ -3457,7 +3602,7 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Medications */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Medication Tracking Log / 药品服药记录</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Medication Tracking Log / 药品服药记录</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem' }}>
                       {elderSession.medications && elderSession.medications.map((med: any) => (
                         <li key={med.id}>
@@ -3470,7 +3615,7 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Activities */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Scheduled Activities Checklist / 起居与康复活动</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Scheduled Activities Checklist / 起居与康复活动</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem' }}>
                       {elderSession.activities && elderSession.activities.map((act: any) => (
                         <li key={act.id} style={{ marginBottom: '0.25rem' }}>
@@ -3521,7 +3666,7 @@ export default function CaregiverDashboard() {
                         window.print();
                       }}
                       className="btn btn-primary no-print"
-                      style={{ width: '100%', marginTop: '1rem', background: 'var(--primary)', border: 'none', color: 'white' }}
+                      style={{ width: '100%', marginTop: '1rem', background: 'var(--primary)', border: 'none', color: 'var(--text-main)' }}
                     >
                       🖨️ Print Daily Report / 打印长者照护日报
                     </button>
@@ -3533,13 +3678,13 @@ export default function CaregiverDashboard() {
         )}
 
         {activeTab === 'maternity' && (
-          <div className="animate-fade-in" style={{ color: '#f8fafc' }}>
+          <div className="animate-fade-in" style={{ color: 'var(--text-main)' }}>
             {/* YueShao Care Hub Header */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: 'linear-gradient(135deg, rgba(236,72,153,0.15) 0%, rgba(30,41,59,0.7) 100%)',
+              background: 'linear-gradient(135deg, rgba(236,72,153,0.08) 0%, var(--bg-card) 100%)', border: '1px solid var(--border)',
               border: '1px solid rgba(236,72,153,0.2)',
               borderRadius: '20px',
               padding: '1.25rem 2rem',
@@ -3558,14 +3703,14 @@ export default function CaregiverDashboard() {
                   justifyContent: 'center',
                   boxShadow: '0 4px 12px rgba(236,72,153,0.3)'
                 }}>
-                  <Heart size={24} style={{ color: '#ffffff' }} />
+                  <Heart size={24} style={{ color: 'var(--text-light)' }} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '1.4rem', margin: 0, fontFamily: 'Outfit', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h2 style={{ fontSize: '1.4rem', margin: 0, fontFamily: 'Outfit', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     YueShao Care Hub <span style={{ fontSize: '0.8rem', background: 'rgba(236,72,153,0.2)', color: '#f472b6', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>Baby Log</span>
                   </h2>
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    Nanny: <strong style={{ color: '#ffffff' }}>{member ? member.name : 'Meizhen Chen'} (ID: {member ? member.member_number : 'MCSA-2026-1112'})</strong>
+                    Nanny: <strong style={{ color: 'var(--text-light)' }}>{member ? member.name : 'Meizhen Chen'} (ID: {member ? member.member_number : 'MCSA-2026-1112'})</strong>
                   </span>
                 </div>
               </div>
@@ -3573,8 +3718,8 @@ export default function CaregiverDashboard() {
               {/* Active Baby selection */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
-                  background: 'rgba(15,23,42,0.5)',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'var(--bg-input)', border: '1px solid var(--border)',
+                  border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)',
                   padding: '0.4rem 1rem',
                   borderRadius: '12px',
                   display: 'flex',
@@ -3606,7 +3751,7 @@ export default function CaregiverDashboard() {
               
               {/* Card 1: Feeding Log */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid #f472b6' }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   🍼 Feeding Log / 喂奶记录
                 </h3>
                 
@@ -3670,10 +3815,10 @@ export default function CaregiverDashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '140px', overflowY: 'auto', paddingRight: '0.25rem' }}>
                     {(confinementSession.feedingLog && confinementSession.feedingLog.length > 0) ? (
                       confinementSession.feedingLog.map((log: any) => (
-                        <div key={log.id} style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}>
+                        <div key={log.id} style={{ display: 'flex', justifyBetween: 'space-between', alignItems: 'center', background: 'var(--bg-input)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}>
                           <div>
                             <span style={{ color: '#f472b6', fontWeight: 700 }}>🕒 {log.time}</span>
-                            <span style={{ marginLeft: '0.75rem', color: 'white' }}>
+                            <span style={{ marginLeft: '0.75rem', color: 'var(--text-main)' }}>
                               {log.type === 'Breast' ? `Breast (${log.breastLeftMins}m L / ${log.breastRightMins}m R)` : `Formula (${log.formulaMl}ml)`}
                             </span>
                           </div>
@@ -3688,7 +3833,7 @@ export default function CaregiverDashboard() {
 
               {/* Card 2: Diaper Record */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid #10b981' }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   💩 Diaper Record / 尿布排便记录
                 </h3>
 
@@ -3744,7 +3889,7 @@ export default function CaregiverDashboard() {
                             borderRadius: '6px',
                             border: diaperStoolColor === st.val ? `2px solid ${st.color}` : '1.5px solid rgba(255,255,255,0.06)',
                             background: diaperStoolColor === st.val ? 'rgba(255,255,255,0.03)' : 'transparent',
-                            color: '#ffffff'
+                            color: 'var(--text-light)'
                           }}
                         >
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: st.color, display: 'inline-block', marginRight: '0.2rem' }}></span>
@@ -3787,7 +3932,7 @@ export default function CaregiverDashboard() {
 
               {/* Card 3: Sleep & Activity */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid #6366f1' }}>
-                <h3 style={{ fontSize: '1.2', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   💤 Sleep & Activity / 睡眠与日常活动
                 </h3>
 
@@ -3851,7 +3996,7 @@ export default function CaregiverDashboard() {
 
               {/* Card 4: Health Check & Jaundice */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '4px solid #f59e0b' }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   🩺 Health Check & Vitals / 体温与黄疸监测
                 </h3>
 
@@ -3875,15 +4020,15 @@ export default function CaregiverDashboard() {
                   <label className="form-label" style={{ marginBottom: '0.5rem', display: 'block' }}>Jaundice Levels / 经皮黄疸指数 (mg/dL)</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '1.25rem' }}>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Forehead / 额头</label>
+                      <label style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Forehead / 额头</label>
                       <input type="number" step="0.1" className="form-input" style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem' }} value={jaundiceForehead} onChange={(e) => setJaundiceForehead(e.target.value)} />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Chest / 胸部</label>
+                      <label style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Chest / 胸部</label>
                       <input type="number" step="0.1" className="form-input" style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem' }} value={jaundiceChest} onChange={(e) => setJaundiceChest(e.target.value)} />
                     </div>
                     <div className="form-group" style={{ margin: 0 }}>
-                      <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Cheeks / 脸颊</label>
+                      <label style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Cheeks / 脸颊</label>
                       <input type="number" step="0.1" className="form-input" style={{ padding: '0.4rem 0.5rem', fontSize: '0.85rem' }} value={jaundiceCheeks} onChange={(e) => setJaundiceCheeks(e.target.value)} />
                     </div>
                   </div>
@@ -3903,7 +4048,7 @@ export default function CaregiverDashboard() {
               marginBottom: '2rem'
             }}>
               <div className="card" style={{ margin: 0, padding: '1.25rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>🍼 Total Feed Volume (ml)</span>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>🍼 Total Feed Volume (ml)</span>
                 <strong style={{ fontSize: '1.8rem', color: '#f472b6', fontFamily: 'Outfit' }}>
                   {(() => {
                     const logs = confinementSession.feedingLog || [];
@@ -3921,7 +4066,7 @@ export default function CaregiverDashboard() {
               </div>
 
               <div className="card" style={{ margin: 0, padding: '1.25rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>💩 Diaper Count (Checks)</span>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>💩 Diaper Count (Checks)</span>
                 <strong style={{ fontSize: '1.8rem', color: '#10b981', fontFamily: 'Outfit' }}>
                   {confinementSession.diaperRecord ? confinementSession.diaperRecord.length : 0} times
                 </strong>
@@ -3929,7 +4074,7 @@ export default function CaregiverDashboard() {
               </div>
 
               <div className="card" style={{ margin: 0, padding: '1.25rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>💤 Total Sleep Duration</span>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>💤 Total Sleep Duration</span>
                 <strong style={{ fontSize: '1.8rem', color: '#818cf8', fontFamily: 'Outfit' }}>
                   {(() => {
                     const logs = confinementSession.sleepActivity?.sleepLogs || [];
@@ -4036,9 +4181,9 @@ export default function CaregiverDashboard() {
                 zIndex: 100,
                 padding: '2rem'
               }}>
-                <div className="card animate-fade-in" style={{ maxWidth: '680px', width: '100%', padding: '2.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem' }}>
-                    <h3 style={{ margin: 0, color: 'white' }}>📈 Baby Development Vitals Trend Charts</h3>
+                <div className="card animate-fade-in" style={{ maxWidth: '680px', width: '100%', padding: '2.5rem', background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem' }}>
+                    <h3 style={{ margin: 0, color: 'var(--text-main)' }}>📈 Baby Development Vitals Trend Charts</h3>
                     <button 
                       onClick={() => setShowChartsModal(false)}
                       style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}
@@ -4052,7 +4197,7 @@ export default function CaregiverDashboard() {
                     <h4 style={{ color: '#ec4899', fontSize: '0.92rem', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       🟡 Transcutaneous Jaundice Trend / 经皮黄疸比对 (mg/dL)
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'var(--bg-input)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
                       {[
                         { label: 'Forehead (额头)', val: Number(confinementSession.healthCheck?.jaundiceForehead || 8.2), color: '#f59e0b', max: 15 },
                         { label: 'Cheeks (脸颊)', val: Number(confinementSession.healthCheck?.jaundiceCheeks || 8.0), color: '#3b82f6', max: 15 },
@@ -4076,7 +4221,7 @@ export default function CaregiverDashboard() {
                     <h4 style={{ color: '#10b981', fontSize: '0.92rem', marginBottom: '0.8rem' }}>
                       🍼 Feeding Volume Analysis / 奶量摄入走势 (ml)
                     </h4>
-                    <div style={{ background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    <div style={{ background: 'var(--bg-input)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
                       <div style={{ display: 'flex', gap: '1rem', height: '120px', alignItems: 'flex-end', justifyContent: 'space-around', paddingTop: '1rem', borderBottom: '1.5px solid rgba(255,255,255,0.1)' }}>
                         {[
                           { day: '6/1', vol: 480, height: '70px' },
@@ -4141,7 +4286,7 @@ export default function CaregiverDashboard() {
                     </div>
 
                     {/* Vitals */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Physical Vitals & Jaundice / 婴儿指征</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Physical Vitals & Jaundice / 婴儿指征</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       <li>Body Temperature: <strong>{confinementSession.healthCheck?.temp || '36.6'} °C</strong> (Normal/正常)</li>
                       <li>Jaundice Forehead: <strong>{confinementSession.healthCheck?.jaundiceForehead || '8.2'} mg/dL</strong> &bull; Chest: <strong>{confinementSession.healthCheck?.jaundiceChest || '7.5'}</strong> &bull; Cheeks: <strong>{confinementSession.healthCheck?.jaundiceCheeks || '8.0'}</strong></li>
@@ -4149,7 +4294,7 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Feeding */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Nutritional Feed Intake / 今日喂奶量</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Nutritional Feed Intake / 今日喂奶量</h4>
                     <p style={{ margin: '0 0 0.5rem 0' }}>
                       Total Formula intake: <strong>{(() => {
                         const logs = confinementSession.feedingLog || [];
@@ -4165,7 +4310,7 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Diapers */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Diaper Output Logs / 排便尿布历史</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Diaper Output Logs / 排便尿布历史</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem' }}>
                       {confinementSession.diaperRecord && confinementSession.diaperRecord.map((log: any) => (
                         <li key={log.id}>
@@ -4175,7 +4320,7 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Activities */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Completed Care Activities / 照护活动</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Completed Care Activities / 照护活动</h4>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                       {confinementSession.sleepActivity?.activities?.bathing && <span style={{ background: '#f0fdf4', color: '#15803d', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✓ Bathing (洗完澡)</span>}
                       {confinementSession.sleepActivity?.activities?.tummyTime && <span style={{ background: '#f0fdf4', color: '#15803d', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600 }}>✓ Tummy Time (抬头训练)</span>}
@@ -4225,7 +4370,7 @@ export default function CaregiverDashboard() {
                         window.print();
                       }}
                       className="btn btn-primary no-print"
-                      style={{ width: '100%', marginTop: '1rem', background: '#ec4899', border: 'none', color: 'white' }}
+                      style={{ width: '100%', marginTop: '1rem', background: '#ec4899', border: 'none', color: 'var(--text-main)' }}
                     >
                       🖨️ Print Daily Report / 打印婴儿日报
                     </button>
@@ -4277,7 +4422,7 @@ export default function CaregiverDashboard() {
                     </div>
 
                     {/* Progress Timeline */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Escort Milestones Timeline / 诊疗服务进度</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Escort Milestones Timeline / 诊疗服务进度</h4>
                     <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                       {[
                         { title: 'Patient Met', zh: '已接诊患者', desc: 'Companion met client at the outpatient lobby.' },
@@ -4298,19 +4443,19 @@ export default function CaregiverDashboard() {
                     </ul>
 
                     {/* Diagnosis & Notes */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Doctor's Diagnosis & Notes / 医生诊断与交代事项</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Doctor's Diagnosis & Notes / 医生诊断与交代事项</h4>
                     <p style={{ margin: '0 0 1.5rem 0', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', color: '#334155', fontStyle: escortSession.doctorNote ? 'normal' : 'italic' }}>
                       {escortSession.doctorNote || 'No diagnosis or directives logged by the companion.'}
                     </p>
 
                     {/* Revisit Date */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Revisit Recommendation / 建议复诊日期</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Revisit Recommendation / 建议复诊日期</h4>
                     <p style={{ margin: '0 0 1.5rem 0', fontWeight: 'bold', color: 'var(--accent-dark)' }}>
                       📅 {escortSession.revisitDate || 'No follow-up revisit recommended.'}
                     </p>
 
                     {/* Attached Photos */}
-                    <h4 style={{ borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Attached Medical Receipts & Documents / 上传单据材料</h4>
+                    <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Attached Medical Receipts & Documents / 上传单据材料</h4>
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                       {escortSession.uploadedPhotos && escortSession.uploadedPhotos.filter((p: string) => !!p).length > 0 ? (
                         escortSession.uploadedPhotos.filter((p: string) => !!p).map((photo: string, index: number) => (
@@ -4360,15 +4505,24 @@ export default function CaregiverDashboard() {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => {
-                        window.print();
-                      }}
-                      className="btn btn-primary no-print"
-                      style={{ width: '100%', marginTop: '1rem', background: 'var(--primary)', border: 'none', color: 'white' }}
-                    >
-                      🖨️ Print Daily Report / 打印陪诊报告
-                    </button>
+                    <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+                      <button 
+                        onClick={() => {
+                          window.print();
+                        }}
+                        className="btn btn-primary"
+                        style={{ width: '100%', background: 'var(--primary)', border: 'none', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700, borderRadius: '8px', padding: '0.8rem 0' }}
+                      >
+                        🖨️ {lang === 'zh' ? '打印/导出PDF' : lang === 'bm' ? 'Cetak/Eksport PDF' : 'Print/Export PDF'}
+                      </button>
+                      <button 
+                        onClick={shareEscortViaWhatsApp}
+                        className="btn"
+                        style={{ width: '100%', background: '#25D366', border: 'none', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700, borderRadius: '8px', padding: '0.8rem 0', boxShadow: '0 2px 6px rgba(37,211,102,0.2)' }}
+                      >
+                        💬 {lang === 'zh' ? '发送至WhatsApp' : lang === 'bm' ? 'Kongsi ke WhatsApp' : 'Share to WhatsApp'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -4378,7 +4532,7 @@ export default function CaregiverDashboard() {
 
         {activeTab === 'library' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
               🏥 Hospital Guidelines & SOP Library / 医院大楼导航与SOP
             </h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.95rem' }}>
@@ -4390,10 +4544,10 @@ export default function CaregiverDashboard() {
               display: 'flex',
               gap: '1rem',
               marginBottom: '2rem',
-              background: 'rgba(15,23,42,0.4)',
+              background: 'var(--bg-input)', border: '1px solid var(--border)',
               padding: '1rem',
               borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.06)'
+              border: '1px solid var(--border)'
             }}>
               <input 
                 type="text" 
@@ -4411,7 +4565,7 @@ export default function CaregiverDashboard() {
                   width: '180px', 
                   height: '40px', 
                   background: 'var(--bg-input)', 
-                  color: 'white', 
+                  color: 'var(--text-main)', 
                   border: '1px solid var(--border)', 
                   borderRadius: '8px', 
                   cursor: 'pointer',
@@ -4455,7 +4609,7 @@ export default function CaregiverDashboard() {
                       margin: 0,
                       padding: 0,
                       overflow: 'hidden',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)',
                       transition: 'transform 0.2s, box-shadow 0.2s',
                       background: 'rgba(30,41,59,0.35)'
                     }}
@@ -4468,7 +4622,7 @@ export default function CaregiverDashboard() {
                           setZoomLevel(1);
                           setShowMapModal(true);
                         }}
-                        style={{ width: '100%', height: '160px', overflow: 'hidden', cursor: 'pointer', position: 'relative', borderBottom: '1px solid rgba(255,255,255,0.06)', backgroundColor: '#0f172a' }}
+                        style={{ width: '100%', height: '160px', overflow: 'hidden', cursor: 'pointer', position: 'relative', borderBottom: '1px solid var(--border)', backgroundColor: '#0f172a' }}
                       >
                         <img 
                           src={item.imageUrl} 
@@ -4496,7 +4650,6 @@ export default function CaregiverDashboard() {
                           right: 0,
                           background: 'linear-gradient(0deg, rgba(15,23,42,0.9) 0%, transparent 100%)',
                           padding: '1.5rem 1rem 0.5rem 1rem',
-                          color: '#fff',
                           fontSize: '0.78rem',
                           fontWeight: 500
                         }}>
@@ -4511,7 +4664,7 @@ export default function CaregiverDashboard() {
                       <div>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.75rem' }}>
                           <BookOpen size={20} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '0.15rem' }} />
-                          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#ffffff', lineHeight: 1.3 }}>{item.title}</h3>
+                          <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-light)', lineHeight: 1.3 }}>{item.title}</h3>
                         </div>
                         <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 1.5rem 0', lineHeight: 1.5 }}>
                           Accredited clinic route layout guide and clinical checkpoint list. Published for active caregivers and student navigations.
@@ -4570,8 +4723,8 @@ export default function CaregiverDashboard() {
                   maxWidth: '900px',
                   width: '100%',
                   height: '90vh',
-                  background: '#0f172a',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
                   borderRadius: '20px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -4584,10 +4737,10 @@ export default function CaregiverDashboard() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '1.25rem 2rem',
-                    borderBottom: '1px solid rgba(255,255,255,0.06)'
+                    borderBottom: '1px solid var(--border)'
                   }}>
                     <div>
-                      <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.2rem', fontWeight: 'bold' }}>{selectedMapItem.title}</h3>
+                      <h3 style={{ margin: 0, color: 'var(--text-light)', fontSize: '1.2rem', fontWeight: 'bold' }}>{selectedMapItem.title}</h3>
                       <span className="badge badge-active" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem', borderRadius: '4px', background: 'var(--primary-glow)', color: 'var(--primary)', marginTop: '0.3rem', display: 'inline-block' }}>
                         📍 {selectedMapItem.state || 'Kuala Lumpur'}
                       </span>
@@ -4644,13 +4797,13 @@ export default function CaregiverDashboard() {
                       background: 'rgba(15,23,42,0.85)',
                       padding: '0.4rem 0.8rem',
                       borderRadius: '30px',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      border: '1px solid var(--border)',
                       backdropFilter: 'blur(8px)',
                       alignItems: 'center'
                     }}>
                       <button 
                         onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.25))}
-                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', width: '24px' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', width: '24px' }}
                       >
                         -
                       </button>
@@ -4659,7 +4812,7 @@ export default function CaregiverDashboard() {
                       </span>
                       <button 
                         onClick={() => setZoomLevel(Math.min(3.0, zoomLevel + 0.25))}
-                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', width: '24px' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', width: '24px' }}
                       >
                         +
                       </button>
@@ -4692,7 +4845,7 @@ export default function CaregiverDashboard() {
                     <button 
                       onClick={() => setShowMapModal(false)}
                       className="btn btn-outline"
-                      style={{ padding: '0.6rem 1.25rem', fontSize: '0.88rem', borderColor: 'rgba(255,255,255,0.15)', color: '#ffffff' }}
+                      style={{ padding: '0.6rem 1.25rem', fontSize: '0.88rem', borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-light)' }}
                     >
                       Close / 关闭
                     </button>
@@ -4705,79 +4858,43 @@ export default function CaregiverDashboard() {
 
         {activeTab === 'card' && (
           <div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: '#ffffff' }}>Digital Union Membership Card</h2>
+            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.8rem', color: 'var(--text-light)' }}>Digital Union Membership Card</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Presents verified MCSA registry identification for clinical audits.</p>
 
             <div className="card-layout-grid">
               {/* Premium Holographic Card Component */}
-              <div style={{
-                width: '100%',
-                maxWidth: '460px',
-                height: '276px',
-                background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
-                color: 'white',
-                padding: '2rem',
-                borderRadius: '24px',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                position: 'relative',
-                overflow: 'hidden',
-                border: '1px solid rgba(255, 255, 255, 0.08)'
-              }}>
+              <div className="union-member-card">
                 {/* Glowing highlight reflection */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-50%',
-                  left: '-50%',
-                  width: '200%',
-                  height: '200%',
-                  background: 'linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.08) 50%, transparent 55%)',
-                  pointerEvents: 'none'
-                }}></div>
+                <div className="union-member-card-glow"></div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div className="union-member-card-header">
                   <div>
-                    <h3 style={{ color: 'white', fontSize: '1.1rem', fontWeight: 'bold', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
+                    <h3 className="union-member-card-title">
                       MULTICARE SUPPORT UNION
                     </h3>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 'bold', letterSpacing: '0.08em' }}>
+                    <span className="union-member-card-subtitle">
                       MCSA MALAYSIA VALIDATED REGISTRY
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <div className="union-member-card-logo-container">
                     {(member?.category || '').includes('Patient Companion') && (
                       <img 
                         src="/aplus-assist-logo.jpg" 
                         alt="A+ Assist Logo" 
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: '#0d162d', objectFit: 'contain', padding: '1px' }} 
+                        className="union-member-card-logo aplus" 
                       />
                     )}
                     <img 
                       src="/mcsa-logo.png" 
                       alt="MCSA Logo" 
-                      style={{ width: '36px', height: '36px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'white', padding: '1px' }} 
+                      className="union-member-card-logo" 
                     />
                   </div>
                 </div>
                 {/* Chip & Photo Row */}
-                <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', margin: '0.5rem 0' }}>
+                <div className="union-member-card-body">
                   {/* Photo box */}
-                  <div style={{
-                    width: '70px',
-                    height: '85px',
-                    backgroundColor: '#1e293b',
-                    border: '2px solid var(--accent)',
-                    borderRadius: '6px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                    position: 'relative',
-                    flexShrink: 0
-                  }}>
+                  <div className="union-member-card-photo-frame">
                     {member?.photo ? (
                       <img 
                         src={member.photo} 
@@ -4785,89 +4902,98 @@ export default function CaregiverDashboard() {
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       />
                     ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: '36px', height: '36px', color: 'var(--text-muted)' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: '40%', height: '40%', color: 'var(--text-muted)' }}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                       </svg>
                     )}
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      backgroundColor: 'rgba(245, 158, 11, 0.9)',
-                      color: '#000000',
-                      fontSize: '0.45rem',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                      padding: '1px 0'
-                    }}>
+                    <div className="union-member-card-photo-tag">
                       PHOTO ID
                     </div>
                   </div>
 
                   {/* Member Info */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div className="union-member-card-info-col">
                     <div>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                      <span className="union-member-card-label">
                         Membership ID
                       </span>
-                      <span style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.05em' }}>
+                      <span className="union-member-card-val-id">
                         {member ? member.member_number : 'MCSA-2026-0009'}
                       </span>
                     </div>
-                    <div>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Specialty</span>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>
-                        {member ? member.category : 'Elderly Caregiver'}
-                      </span>
+                    <div style={{ display: 'flex', gap: '3.6cqw' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span className="union-member-card-label">Specialty</span>
+                        <span className="union-member-card-val-spec">
+                          {member ? member.category : 'Elderly Caregiver'}
+                        </span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span className="union-member-card-label">NRIC / ID No.</span>
+                        <span className="union-member-card-val-mono">
+                          {member?.nric || '830812-14-5544'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Holder Name</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>{member ? member.name : 'Li Xiulan'}</span>
+                <div className="union-member-card-footer">
+                  <div className="union-member-card-footer-item">
+                    <span className="union-member-card-label">Holder Name</span>
+                    <span className="union-member-card-val-text">{member ? member.name : 'Li Xiulan'}</span>
                   </div>
 
-                  <div style={{ marginLeft: '1rem' }}>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>NRIC / ID No.</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{member?.nric || '830812-14-5544'}</span>
-                  </div>
-                  
                   {/* Status stamp */}
-                  <div style={{
-                    border: '2px solid var(--health)',
-                    color: 'var(--health)',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.7rem',
-                    fontWeight: 'bold',
-                    transform: 'rotate(-5deg)',
-                    textTransform: 'uppercase',
-                    backgroundColor: 'var(--bg-main)',
-                    marginRight: 'auto',
-                    marginLeft: '1rem'
-                  }}>
+                  <div className="union-member-card-status-stamp">
                     ✓ Active Vetted
                   </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Expiration</span>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{member ? member.expiry : '2027-05-28'}</span>
+                  <div className="union-member-card-footer-item" style={{ textAlign: 'right' }}>
+                    <span className="union-member-card-label">Expiration</span>
+                    <span className="union-member-card-val-mono">{member ? member.expiry : '2027-05-28'}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Security audit advice */}
+              {/* Security audit advice & contribution priority */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="card" style={{ margin: 0, height: '100%', background: 'rgba(30,41,59,0.3)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                <div className="card" style={{ margin: 0, height: '100%', background: 'var(--bg-input)', borderColor: 'var(--border)' }}>
                   <h4 style={{ color: 'var(--accent)', fontSize: '1.05rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     🛡️ Digital Credential Vetted
                   </h4>
-                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '1rem' }}>
                     This membership card operates with encrypted registry validation. You can present this QR-bound serial card to clinic or hospital supervisors to access outpatient priorities.
                   </p>
+
+                  {/* Contribution priority status */}
+                  <div style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    fontSize: '0.82rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.4rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>{lang === 'zh' ? '公会年度奉献达标率' : 'Guild Contribution Compliance'}:</span>
+                      <strong style={{ color: 'var(--text-light)' }}>
+                        {member?.contributionCompliance !== undefined ? member.contributionCompliance : 100}%
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>{lang === 'zh' ? '派单优先级' : 'Dispatch Priority'}:</span>
+                      {(() => {
+                        const comp = member?.contributionCompliance !== undefined ? member.contributionCompliance : 100;
+                        if (comp >= 90) return <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--health)', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem', fontWeight: 'bold' }}>⚡ High Priority / 优先派单</span>;
+                        if (comp >= 50) return <span className="badge" style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: 'var(--accent)', border: '1px solid rgba(37, 99, 235, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem', fontWeight: 'bold' }}>✔️ Standard / 正常派单</span>;
+                        if (comp > 0) return <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem', fontWeight: 'bold' }}>⚠️ Low / 限流派单</span>;
+                        return <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.72rem', padding: '0.2rem 0.5rem', fontWeight: 'bold' }}>🚫 Restricted / 限制派单</span>;
+                      })()}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4878,7 +5004,7 @@ export default function CaregiverDashboard() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff', fontFamily: 'Outfit' }}>
+                <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-light)', fontFamily: 'Outfit' }}>
                   {lang === 'zh' ? '病人记录与服务协议' : lang === 'bm' ? 'Rekod Pesakit & Perjanjian' : 'Patient Profiles & Agreements'}
                 </h2>
                 <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
@@ -4913,7 +5039,7 @@ export default function CaregiverDashboard() {
                 gap: '1rem'
               }}>
                 <div style={{ flex: 1 }}>
-                  <strong style={{ color: '#ffffff', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>🔗 Share Agreement Link with Client / 分享签署链接给病人</strong>
+                  <strong style={{ color: 'var(--text-light)', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>🔗 Share Agreement Link with Client / 分享签署链接给病人</strong>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     Send this encrypted page URL to your client. Once they fill out their health profile and sign, it will dynamically register on your dashboard.
                   </span>
@@ -4922,10 +5048,9 @@ export default function CaregiverDashboard() {
                   onClick={() => {
                     const link = window.location.origin + '/sign-agreement?caregiver=' + (member ? member.id : 'M-101');
                     navigator.clipboard.writeText(link);
-                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                    const linkMsg = 'Signing Link copied to clipboard:\n' + link + 
-                      (isLocal ? '\n\n💡 提示 / Tip:\n当前网站运行在您的电脑本地开发环境 (localhost)，此链接只能在您当前的这台电脑浏览器上打开测试。\n\n如需在手机上或让客户测试，请将链接中的 "localhost" 替换为您电脑的局域网 IP (例如 192.168.x.x)，或者在部署到公网服务器域名 (如 https://mcsa.com.my) 后再分享。' : '');
-                    alert(linkMsg);
+                    setShareLink(link);
+                    setShareType('escort');
+                    setShowShareModal(true);
                   }}
                   className="btn btn-outline"
                   style={{
@@ -4957,19 +5082,19 @@ export default function CaregiverDashboard() {
                     {escortForms.map((f: any) => (
                       <tr key={f.id}>
                         <td>
-                          <strong style={{ color: '#ffffff' }}>{f.fullName}</strong>
+                          <strong style={{ color: 'var(--text-light)' }}>{f.fullName}</strong>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.gender} &bull; {f.nric}</div>
                         </td>
                         <td>
-                          <span style={{ color: '#ffffff', fontWeight: 600 }}>{f.appointmentDate}</span>
+                          <span style={{ color: 'var(--text-light)', fontWeight: 600 }}>{f.appointmentDate}</span>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>🕒 {f.appointmentTime}</div>
                         </td>
                         <td>
-                          <span style={{ color: '#ffffff' }}>{f.facility}</span>
+                          <span style={{ color: 'var(--text-light)' }}>{f.facility}</span>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{f.specialty} ({f.doctor || 'N/A'})</div>
                         </td>
                         <td>
-                          <span style={{ color: '#ffffff' }}>{f.emergencyName}</span>
+                          <span style={{ color: 'var(--text-light)' }}>{f.emergencyName}</span>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>📞 {f.emergencyPhone} ({f.relationship})</div>
                         </td>
                         <td>
@@ -5001,14 +5126,14 @@ export default function CaregiverDashboard() {
                   ← Back to List / 返回列表
                 </button>
 
-                <div className="card animate-fade-in" style={{ padding: '3rem', background: '#0f172a', borderColor: 'rgba(255,255,255,0.08)', color: '#cbd5e1', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
+                <div className="card animate-fade-in" style={{ padding: '3rem', background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-main)', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
                   {/* Digital Signature & Form Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <img src="/aplus-assist-logo.jpg" alt="A+ Assist" style={{ width: '50px', height: '50px', backgroundColor: '#0d162d', borderRadius: '50%', padding: '2px', border: '1px solid rgba(255,255,255,0.1)', objectFit: 'contain' }} />
                       <img src="/mcsa-logo.png" alt="MCSA" style={{ width: '50px', height: '50px', backgroundColor: 'white', borderRadius: '50%', padding: '2px' }} />
                       <div>
-                        <h3 style={{ color: '#ffffff', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
+                        <h3 style={{ color: 'var(--text-light)', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Medical Escort Client Record / 陪诊档案资料</span>
                       </div>
                     </div>
@@ -5018,42 +5143,42 @@ export default function CaregiverDashboard() {
                     </div>
                   </div>
 
-                  <h2 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '2rem', fontFamily: 'Outfit' }}>📝 Medical Escort Service – Client Information Form</h2>
+                  <h2 style={{ textAlign: 'center', color: 'var(--text-light)', marginBottom: '2rem', fontFamily: 'Outfit' }}>📝 Medical Escort Service – Client Information Form</h2>
 
                   {/* Section 1 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>1. Personal Information / 个人信息</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>1. Personal Information / 个人信息</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-                      <div><strong>Full Name / 姓名:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.fullName}</span></div>
-                      <div><strong>Gender / 性别:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.gender}</span></div>
-                      <div><strong>Date of Birth / 出生日期:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.dob || 'N/A'}</span></div>
-                      <div><strong>NRIC or Passport / 证件号:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.nric}</span></div>
-                      <div><strong>Contact Number / 电话:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.phone || 'N/A'}</span></div>
-                      <div><strong>Home Address / 地址:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.address || 'N/A'}</span></div>
-                      <div><strong>Emergency Contact / 紧急联系人:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.emergencyName || 'N/A'}</span></div>
-                      <div><strong>Emergency Phone / 联系电话:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.emergencyPhone || 'N/A'}</span></div>
-                      <div><strong>Relationship / 关系:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.relationship || 'N/A'}</span></div>
+                      <div><strong>Full Name / 姓名:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.fullName}</span></div>
+                      <div><strong>Gender / 性别:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.gender}</span></div>
+                      <div><strong>Date of Birth / 出生日期:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.dob || 'N/A'}</span></div>
+                      <div><strong>NRIC or Passport / 证件号:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.nric}</span></div>
+                      <div><strong>Contact Number / 电话:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.phone || 'N/A'}</span></div>
+                      <div><strong>Home Address / 地址:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.address || 'N/A'}</span></div>
+                      <div><strong>Emergency Contact / 紧急联系人:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.emergencyName || 'N/A'}</span></div>
+                      <div><strong>Emergency Phone / 联系电话:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.emergencyPhone || 'N/A'}</span></div>
+                      <div><strong>Relationship / 关系:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.relationship || 'N/A'}</span></div>
                     </div>
                   </div>
 
                   {/* Section 2 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>2. Escort Service Details / 陪诊服务详情</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>2. Escort Service Details / 陪诊服务详情</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-                      <div><strong>Appointment Date / 就诊日期:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.appointmentDate || 'N/A'}</span></div>
-                      <div><strong>Appointment Time / 就诊时间:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.appointmentTime || 'N/A'}</span></div>
-                      <div><strong>Medical Facility / 就诊医院:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.facility || 'N/A'}</span></div>
-                      <div><strong>Doctor Name / 医生姓名:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.doctor || 'N/A'}</span></div>
-                      <div><strong>Department or Specialty / 科室:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.specialty || 'N/A'}</span></div>
-                      <div><strong>Admin Tasks Required / 协助取药/付款/登记:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.assistanceRequired ? 'Yes / 是' : 'No / 否'}</span></div>
+                      <div><strong>Appointment Date / 就诊日期:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.appointmentDate || 'N/A'}</span></div>
+                      <div><strong>Appointment Time / 就诊时间:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.appointmentTime || 'N/A'}</span></div>
+                      <div><strong>Medical Facility / 就诊医院:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.facility || 'N/A'}</span></div>
+                      <div><strong>Doctor Name / 医生姓名:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.doctor || 'N/A'}</span></div>
+                      <div><strong>Department or Specialty / 科室:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.specialty || 'N/A'}</span></div>
+                      <div><strong>Admin Tasks Required / 协助取药/付款/登记:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.assistanceRequired ? 'Yes / 是' : 'No / 否'}</span></div>
                     </div>
                   </div>
 
                   {/* Section 3 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>3. Health & Medical History / 健康与既往病史</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>3. Health & Medical History / 健康与既往病史</h4>
                     <div style={{ fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div><strong>Main Complaint / 就诊主诉:</strong> <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.25rem 0 0 0' }}>{currentViewForm.complaint || 'N/A'}</p></div>
+                      <div><strong>Main Complaint / 就诊主诉:</strong> <p style={{ color: 'var(--text-light)', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.25rem 0 0 0' }}>{currentViewForm.complaint || 'N/A'}</p></div>
                       <div>
                         <strong>Past Medical History / 既往病史:</strong>
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
@@ -5071,55 +5196,55 @@ export default function CaregiverDashboard() {
 
                   {/* Section 4 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>4. Allergy Information / 过敏史</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>4. Allergy Information / 过敏史</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem', fontSize: '0.9rem' }}>
-                      <div><strong>Drug Allergies / 药物过敏:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.drugAllergy}</span></div>
-                      <div><strong>Food Allergies / 食物过敏:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.foodAllergy}</span></div>
-                      <div><strong>Other Allergies / 其他过敏:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.otherAllergy}</span></div>
+                      <div><strong>Drug Allergies / 药物过敏:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.drugAllergy}</span></div>
+                      <div><strong>Food Allergies / 食物过敏:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.foodAllergy}</span></div>
+                      <div><strong>Other Allergies / 其他过敏:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.otherAllergy}</span></div>
                     </div>
                   </div>
 
                   {/* Section 5 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>5. Current Medication / 当前用药情况</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>5. Current Medication / 当前用药情况</h4>
                     <div style={{ fontSize: '0.9rem' }}>
-                      <strong>Taking medications or supplements / 是否正在服药:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.takingMeds ? 'Yes / 是' : 'No / 否'}</span>
+                      <strong>Taking medications or supplements / 是否正在服药:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.takingMeds ? 'Yes / 是' : 'No / 否'}</span>
                       {currentViewForm.takingMeds && (
-                        <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.4rem 0 0 0', whiteSpace: 'pre-wrap' }}>{currentViewForm.medsList}</p>
+                        <p style={{ color: 'var(--text-light)', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.4rem 0 0 0', whiteSpace: 'pre-wrap' }}>{currentViewForm.medsList}</p>
                       )}
                     </div>
                   </div>
 
                   {/* Section 6 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>6. Surgical History / 手术史</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>6. Surgical History / 手术史</h4>
                     <div style={{ fontSize: '0.9rem' }}>
                       <strong>History of surgeries or procedures / 手术史:</strong>
-                      <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.4rem 0 0 0' }}>{currentViewForm.surgicalHistory || 'No / 无'}</p>
+                      <p style={{ color: 'var(--text-light)', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: '0.4rem 0 0 0' }}>{currentViewForm.surgicalHistory || 'No / 无'}</p>
                     </div>
                   </div>
 
                   {/* Section 7 */}
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>7. Functional & Mobility Assessment / 行动与感官功能评估</h4>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>7. Functional & Mobility Assessment / 行动与感官功能评估</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-                      <div><strong>Mobility Difficulty / 行动评估:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.mobility}</span></div>
-                      <div><strong>Hearing Difficulties / 听力困难:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.hearingDifficulty ? 'Yes / 有' : 'No / 无'}</span></div>
-                      <div><strong>Speech Difficulties / 语言困难:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.speechDifficulty ? 'Yes / 有' : 'No / 无'}</span></div>
-                      <div><strong>Visual Impairment / 视力受损情况:</strong> <span style={{ color: '#ffffff' }}>{currentViewForm.visualImpairment || 'No / 无'}</span></div>
+                      <div><strong>Mobility Difficulty / 行动评估:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.mobility}</span></div>
+                      <div><strong>Hearing Difficulties / 听力困难:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.hearingDifficulty ? 'Yes / 有' : 'No / 无'}</span></div>
+                      <div><strong>Speech Difficulties / 语言困难:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.speechDifficulty ? 'Yes / 有' : 'No / 无'}</span></div>
+                      <div><strong>Visual Impairment / 视力受损情况:</strong> <span style={{ color: 'var(--text-light)' }}>{currentViewForm.visualImpairment || 'No / 无'}</span></div>
                     </div>
                   </div>
 
                   {/* Section 8 */}
                   <div style={{ marginBottom: '2.5rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>8. Additional Information / 额外备注</h4>
-                    <p style={{ color: '#ffffff', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: 0 }}>{currentViewForm.additionalInfo || 'None / 无'}</p>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1rem' }}>8. Additional Information / 额外备注</h4>
+                    <p style={{ color: 'var(--text-light)', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', borderRadius: '6px', margin: 0 }}>{currentViewForm.additionalInfo || 'None / 无'}</p>
                   </div>
 
                   {/* Escort Authorization & Liability Agreement (陪诊协议条款) */}
-                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '16px', marginBottom: '2.5rem', fontSize: '0.85rem' }}>
-                    <h3 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '1.5rem', fontFamily: 'Outfit' }}>🤝 Medical Escort Service Authorization & Liability Agreement / 陪诊服务协议与责任告知书</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '1rem', borderRadius: '8px', background: 'var(--bg-main)' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', padding: '2rem', borderRadius: '16px', marginBottom: '2.5rem', fontSize: '0.85rem' }}>
+                    <h3 style={{ textAlign: 'center', color: 'var(--text-light)', marginBottom: '1.5rem', fontFamily: 'Outfit' }}>🤝 Medical Escort Service Authorization & Liability Agreement / 陪诊服务协议与责任告知书</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '240px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)', padding: '1rem', borderRadius: '8px', background: 'var(--bg-main)' }}>
                       <p><strong>第一条 服务内容 / Article 1 Service Scope</strong><br />
                       乙方仅提供非医疗类流程协助，包括：陪同挂号、排队、缴费、检查引导、取药、办理出入院手续、送检、引导路线、协助沟通。<br />
                       Provider only provides non-medical process assistance, including escorting registration, queuing, payment, examination guidance, medication collection, admission/discharge procedures, sample delivery, route guidance, and communication assistance.</p>
@@ -5153,14 +5278,14 @@ export default function CaregiverDashboard() {
                       "I hereby confirm that the information provided above is true and accurate. I understand that the information will be used solely for medical escort service coordination. / 我在此确认上述提供的信息真实准确。我明白此信息将仅用于陪诊服务协调及紧急救援目的。"
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1.5rem' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Client Digital Signature / 甲方客户签字</span>
                         <div style={{ fontSize: '1.3rem', fontFamily: 'Outfit, sans-serif', fontStyle: 'italic', fontWeight: 'bold', color: 'var(--accent)', margin: '0.75rem 0' }}>
                           ✍️ {currentViewForm.clientSigned}
                         </div>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Signed Date / 签署日期: {currentViewForm.signedDate}</span>
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>Escort Service Provider / 乙方陪诊师确认</span>
                         <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#60a5fa', margin: '0.9rem 0' }}>
                           🛡️ {(() => {
@@ -5188,12 +5313,12 @@ export default function CaregiverDashboard() {
                 </button>
 
                 <div className="card" style={{ maxWidth: '800px', margin: '0 auto', padding: '2.5rem' }}>
-                  <h3 style={{ color: '#ffffff', marginBottom: '1.5rem', textAlign: 'center' }}>📋 Fill New Client Escort Intake Form</h3>
+                  <h3 style={{ color: 'var(--text-light)', marginBottom: '1.5rem', textAlign: 'center' }}>📋 Fill New Client Escort Intake Form</h3>
                   <form onSubmit={submitEscortForm}>
                     
                     {/* Section 1 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>1. Personal Information / 个人基本信息</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>1. Personal Information / 个人基本信息</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="form-label">Full Name / 客户姓名 *</label>
@@ -5201,14 +5326,14 @@ export default function CaregiverDashboard() {
                         </div>
                         <div className="form-group">
                           <label className="form-label">Gender / 性别</label>
-                          <select className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }} value={formGender} onChange={(e) => setFormGender(e.target.value)}>
+                          <select className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }} value={formGender} onChange={(e) => setFormGender(e.target.value)}>
                             <option value="Male">Male / 男</option>
                             <option value="Female">Female / 女</option>
                           </select>
                         </div>
                         <div className="form-group">
                           <label className="form-label">Date of Birth / 出生日期</label>
-                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formDob} onChange={(e) => setFormDob(e.target.value)} />
+                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)' }} value={formDob} onChange={(e) => setFormDob(e.target.value)} />
                         </div>
                         <div className="form-group">
                           <label className="form-label">NRIC or Passport / 证件号 *</label>
@@ -5239,15 +5364,15 @@ export default function CaregiverDashboard() {
 
                     {/* Section 2 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>2. Escort Service Details / 就诊陪护详情</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>2. Escort Service Details / 就诊陪护详情</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="form-label">Appointment Date / 就诊日期</label>
-                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formApptDate} onChange={(e) => setFormApptDate(e.target.value)} />
+                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)' }} value={formApptDate} onChange={(e) => setFormApptDate(e.target.value)} />
                         </div>
                         <div className="form-group">
                           <label className="form-label">Appointment Time / 就诊时间</label>
-                          <input type="time" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formApptTime} onChange={(e) => setFormApptTime(e.target.value)} />
+                          <input type="time" className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)' }} value={formApptTime} onChange={(e) => setFormApptTime(e.target.value)} />
                         </div>
                         <div className="form-group">
                           <label className="form-label">Medical Facility / 医院或诊所</label>
@@ -5273,7 +5398,7 @@ export default function CaregiverDashboard() {
 
                     {/* Section 3 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>3. Health & Medical History / 健康主诉与病史</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>3. Health & Medical History / 健康主诉与病史</h4>
                       <div className="form-group">
                         <label className="form-label">Main Complaint or Reason for Consultation / 就诊主诉与原因</label>
                         <textarea className="form-input" placeholder="Describe current symptoms or consultation purpose..." rows={3} style={{ resize: 'vertical' }} value={formComplaint} onChange={(e) => setFormComplaint(e.target.value)} />
@@ -5303,7 +5428,7 @@ export default function CaregiverDashboard() {
 
                     {/* Section 4 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>4. Allergy Information / 过敏信息</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>4. Allergy Information / 过敏信息</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="form-label">Drug Allergies / 药物过敏史</label>
@@ -5322,7 +5447,7 @@ export default function CaregiverDashboard() {
 
                     {/* Section 5 & 6 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>5. Current Medication & Surgeries / 用药与手术史</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>5. Current Medication & Surgeries / 用药与手术史</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
@@ -5342,11 +5467,11 @@ export default function CaregiverDashboard() {
 
                     {/* Section 7 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>6. Functional & Mobility Assessment / 行动与日常功能评估</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>6. Functional & Mobility Assessment / 行动与日常功能评估</h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="form-label">Mobility Difficulties / 行动困难评估</label>
-                          <select className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }} value={formMobility} onChange={(e) => setFormMobility(e.target.value)}>
+                          <select className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }} value={formMobility} onChange={(e) => setFormMobility(e.target.value)}>
                             <option value="Walk Independently">Walk Independently / 独立行走</option>
                             <option value="Require Walking Stick">Require Walking Stick / 需拐杖</option>
                             <option value="Require Walker">Require Walker / 需助行架</option>
@@ -5373,14 +5498,14 @@ export default function CaregiverDashboard() {
 
                     {/* Section 8 Form */}
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>7. Additional Information / 其他特别备注</h4>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>7. Additional Information / 其他特别备注</h4>
                       <div className="form-group">
                         <textarea className="form-input" placeholder="Any specific requirements or instructions for our medical escort..." rows={2} style={{ resize: 'vertical' }} value={formAdditional} onChange={(e) => setFormAdditional(e.target.value)} />
                       </div>
                     </div>
 
                     {/* Signature */}
-                    <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
+                    <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
                       <p style={{ fontSize: '0.82rem', margin: '0 0 1rem 0', color: 'var(--text-muted)' }}>
                         * Agreement Terms Declaration: I hereby authorize MCSA companion to assist during hospital outpatient activities. I confirm that all medical history is accurate.
                       </p>
@@ -5391,7 +5516,7 @@ export default function CaregiverDashboard() {
                         </div>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label">Signed Date</label>
-                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff' }} value={formSignedDate} onChange={(e) => setFormSignedDate(e.target.value)} />
+                          <input type="date" className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)' }} value={formSignedDate} onChange={(e) => setFormSignedDate(e.target.value)} />
                         </div>
                       </div>
                     </div>
@@ -5410,7 +5535,7 @@ export default function CaregiverDashboard() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>Confinement Service Agreement / 产后护理服务协议</h2>
+                <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-light)' }}>Confinement Service Agreement / 产后护理服务协议</h2>
                 <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>Generate and manage agreements for maternity care clients.</p>
               </div>
               {confinementFormMode === 'list' && (
@@ -5440,7 +5565,7 @@ export default function CaregiverDashboard() {
                 gap: '1rem'
               }}>
                 <div style={{ flex: 1 }}>
-                  <strong style={{ color: '#ffffff', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>🔗 Share Agreement Link with Client / 分享协议链接给长者家属</strong>
+                  <strong style={{ color: 'var(--text-light)', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>🔗 Share Agreement Link with Client / 分享协议链接给长者家属</strong>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     Copy the link below or click "📋 Copy" on a pending contract to send to the client. Once signed, the contract will update automatically here.
                   </span>
@@ -5477,7 +5602,7 @@ export default function CaregiverDashboard() {
                           <td>
                             {c.clientName ? (
                               <div>
-                                <strong style={{ color: '#ffffff' }}>{c.clientName}</strong>
+                                <strong style={{ color: 'var(--text-light)' }}>{c.clientName}</strong>
                                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{c.clientPhone}</div>
                               </div>
                             ) : (
@@ -5485,11 +5610,11 @@ export default function CaregiverDashboard() {
                             )}
                           </td>
                           <td>
-                            <span style={{ color: '#ffffff' }}>{c.clientEdd || '-'}</span>
+                            <span style={{ color: 'var(--text-light)' }}>{c.clientEdd || '-'}</span>
                             {c.signedDate && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Signed: {c.signedDate}</div>}
                           </td>
                           <td>
-                            <strong style={{ color: '#ffffff' }}>RM {c.serviceFee}</strong>
+                            <strong style={{ color: 'var(--text-light)' }}>RM {c.serviceFee}</strong>
                             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Dep: RM {c.deposit}</div>
                           </td>
                           <td>
@@ -5514,7 +5639,9 @@ export default function CaregiverDashboard() {
                                   onClick={() => {
                                     const link = window.location.origin + '/sign-agreement?type=confinement&contractId=' + c.id;
                                     navigator.clipboard.writeText(link);
-                                    alert('Client Signing Link copied to clipboard:\n' + link);
+                                    setShareLink(link);
+                                    setShareType('confinement');
+                                    setShowShareModal(true);
                                   }}
                                   className="btn btn-primary"
                                   style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
@@ -5542,12 +5669,44 @@ export default function CaregiverDashboard() {
                   ← Back to List / 返回列表
                 </button>
 
-                <div id="confinement-agreement-print-area" className="card animate-fade-in" style={{ padding: '3rem', background: '#0f172a', borderColor: 'rgba(255,255,255,0.08)', color: '#cbd5e1', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
+                {currentViewConfinementContract.status !== 'Signed' && (
+                  <div className="card" style={{ padding: '1.25rem 2rem', marginBottom: '1.5rem', background: 'var(--bg-input)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <strong style={{ color: 'var(--text-light)', fontSize: '0.95rem' }}>🔗 Client Signing Link / 客户签署链接 (Send to Client)</strong>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        className="form-input" 
+                        style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.85rem', background: 'var(--bg-card)', cursor: 'text' }}
+                        value={window.location.origin + '/sign-agreement?type=confinement&contractId=' + currentViewConfinementContract.id}
+                        onClick={(e) => e.target.select()}
+                      />
+                      <button 
+                        onClick={() => {
+                          const link = window.location.origin + '/sign-agreement?type=confinement&contractId=' + currentViewConfinementContract.id;
+                          navigator.clipboard.writeText(link);
+                          setShareLink(link);
+                          setShareType('confinement');
+                          setShowShareModal(true);
+                        }}
+                        className="btn btn-primary"
+                        style={{ padding: '0.65rem 1.5rem', fontSize: '0.88rem' }}
+                      >
+                        📋 Copy Link
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Copy this link and send it to your client. They can open it to fill in their details and sign the agreement.
+                    </span>
+                  </div>
+                )}
+
+                <div id="confinement-agreement-print-area" className="card animate-fade-in" style={{ padding: '3rem', background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-main)', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <img src="/mcsa-logo.png" alt="MCSA" style={{ width: '50px', height: '50px', backgroundColor: 'white', borderRadius: '50%', padding: '2px' }} />
                       <div>
-                        <h3 style={{ color: '#ffffff', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
+                        <h3 style={{ color: 'var(--text-light)', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confinement Agreement / 产后护理协议</span>
                       </div>
                     </div>
@@ -5561,7 +5720,7 @@ export default function CaregiverDashboard() {
                     </div>
                   </div>
 
-                  <h2 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '2rem', fontFamily: 'Outfit', fontSize: '1.8rem' }}>
+                  <h2 style={{ textAlign: 'center', color: 'var(--text-light)', marginBottom: '2rem', fontFamily: 'Outfit', fontSize: '1.8rem' }}>
                     产后护理服务协议 / POSTNATAL CARE SERVICE AGREEMENT
                   </h2>
 
@@ -5572,16 +5731,16 @@ export default function CaregiverDashboard() {
                   <div style={{ marginBottom: '2rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                       <div>
-                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                           甲方（客户/家属）Client / Family Representative
                         </h4>
                         {currentViewConfinementContract.clientName ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.88rem' }}>
-                            <div><strong>姓名 Name:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.clientName}</span></div>
-                            <div><strong>身份证/护照号码 NRIC/Passport No.:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.clientNric}</span></div>
-                            <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.clientPhone}</span></div>
-                            <div><strong>预产期 Expected Due Date (EDD):</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.clientEdd}</span></div>
-                            <div><strong>地址 Address:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.clientAddress}</span></div>
+                            <div><strong>姓名 Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.clientName}</span></div>
+                            <div><strong>身份证/护照号码 NRIC/Passport No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.clientNric}</span></div>
+                            <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.clientPhone}</span></div>
+                            <div><strong>预产期 Expected Due Date (EDD):</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.clientEdd}</span></div>
+                            <div><strong>地址 Address:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.clientAddress}</span></div>
                           </div>
                         ) : (
                           <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.88rem' }}>
@@ -5591,56 +5750,129 @@ export default function CaregiverDashboard() {
                         )}
                       </div>
                       <div>
-                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                           乙方（照护人员）Caregiver
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.88rem' }}>
-                          <div><strong>姓名 Name:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.caregiverName}</span></div>
-                          <div><strong>会员编号 Membership No.:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.caregiverMemberNo}</span></div>
-                          <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.caregiverPhone}</span></div>
+                          <div><strong>姓名 Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.caregiverName}</span></div>
+                          <div><strong>会员编号 Membership No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.caregiverMemberNo}</span></div>
+                          <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.caregiverPhone}</span></div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
-                      第一条 服务内容 / Scope of Services
+                  <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem', fontSize: '0.85rem' }}>
+                    <h4 style={{ textAlign: 'center', marginBottom: '1rem', fontFamily: 'Outfit', color: 'var(--text-light)' }}>
+                      🤝 产后护理服务条款中英文细则 / Connatal & Confinement Care Agreement Clauses
                     </h4>
-                    <p style={{ fontSize: '0.88rem', margin: 0, lineHeight: 1.6 }}>
-                      妈妈护理、宝宝护理、母乳喂养协助、宝宝洗澡、衣物清洗、月子护理及相关照护支持。<br />
-                      <span style={{ color: 'var(--text-muted)' }}>Mother care, baby care, breastfeeding support, baby bathing, laundry and confinement care support.</span>
-                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', height: '280px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid var(--border)', padding: '0.75rem', borderRadius: '8px', background: 'var(--bg-main)', lineHeight: '1.5' }}>
+                      
+                      <p>
+                        <strong>第一条 服务内容 / Article 1: Scope of Service</strong><br />
+                        乙方根据专业培训知识，为甲方提供产后护理服务，包括但不限于：<br />
+                        The Caregiver (Second Party) shall provide postnatal care services to the Client (First Party) based on professional training knowledge, including but not limited to:<br /><br />
+                        <strong>一、产妇护理 / I. Maternal Care:</strong><br />
+                        • 协助产妇日常生活照顾 (Assistance with maternal daily life care)<br />
+                        • 协助伤口观察及护理 (Assistance with wound observation and care)<br />
+                        • 协助乳房护理及母乳喂养指导 (Assistance with breast care and lactation guidance)<br />
+                        • 观察产妇身体恢复状况 (Observation of maternal physical recovery status)<br />
+                        • 协助记录产妇饮食及休息情况 (Assistance with recording maternal diet and rest)<br />
+                        • 协助产妇情绪关怀与支持 (Assistance with maternal emotional care and support)<br />
+                        • 准备及烹煮月子餐（如双方约定） (Preparation and cooking of confinement meals, if agreed by both parties)<br /><br />
+                        <strong>二、新生儿护理 / II. Newborn Care:</strong><br />
+                        • 新生儿喂奶 (Newborn feeding)<br />
+                        • 拍嗝 (Burping)<br />
+                        • 换尿布 (Diaper changing)<br />
+                        • 洗澡 (Bathing)<br />
+                        • 脐带护理 (Umbilical cord care)<br />
+                        • 睡眠照顾 (Sleep care)<br />
+                        • 新生儿日常观察记录 (Newborn daily observation and recording)<br />
+                        • 奶瓶清洁与消毒 (Baby bottle cleaning and sterilization)<br /><br />
+                        <strong>三、家务范围 / III. Housework Limits:</strong><br />
+                        仅限于与产妇及婴儿有关之工作 (Only limited to tasks directly related to the mother and baby):<br />
+                        • 清洗宝宝衣物 (Washing baby clothes)<br />
+                        • 清洗宝宝用品 (Washing baby products)<br />
+                        • 清洁奶瓶及喂养工具 (Cleaning baby bottles and feeding utensils)<br />
+                        • 整理产妇房间 (Tidying up the mother's room)
+                      </p>
+                      <p>
+                        <strong>第二条 非服务范围 / Article 2: Exclusions (Out of Scope)</strong><br />
+                        乙方并非医生、护士或医疗人员，因此以下事项不属于服务范围：<br />
+                        The Caregiver is not a doctor, nurse, or medical professional; therefore, the following matters are strictly excluded from the scope of service:<br />
+                        • 医疗诊断 (Medical diagnosis)<br />
+                        • 开药或提供医疗建议 (Prescribing medication or offering medical advice)<br />
+                        • 注射或医疗操作 (Injections or medical procedures)<br />
+                        • 陪同看诊（除非另有约定） (Accompanying to medical consultations, unless otherwise agreed)<br />
+                        • 照顾其他家庭成员 (Caring for other family members)<br />
+                        • 打扫全屋卫生 (Whole-house cleaning)<br />
+                        • 照顾宠物 (Pet care)<br />
+                        • 洗车 (Car washing)<br />
+                        • 家庭佣人工作 (Domestic helper/maid tasks)<br />
+                        • 照顾访客或亲属 (Caring for visitors or relatives)
+                      </p>
+                      <p>
+                        <strong>第三条 医疗免责条款 / Article 3: Medical Disclaimer</strong><br />
+                        甲方了解并同意 / The Client understands and agrees that:<br />
+                        1. 乙方仅提供非医疗性质之护理服务。 (The Caregiver only provides care services of a non-medical nature.)<br />
+                        2. 婴儿如出现以下情况，乙方应立即通知甲方，并建议送医：发烧、黄疸加重、呼吸困难、抽搐、呕吐异常、拒奶、其他异常情况。 (If the baby exhibits any of the following conditions, the Caregiver shall immediately notify the Client and recommend medical attention: fever, worsening jaundice, breathing difficulties, convulsions, abnormal vomiting, milk refusal, or other abnormal conditions.)<br />
+                        3. 乙方无权作出任何医疗诊断。 (The Caregiver has no authority to make any medical diagnosis.)<br />
+                        4. 婴儿之先天性疾病、遗传疾病、染色体异常、发育迟缓、神经系统疾病、心脏疾病、代谢疾病或其他出生前已存在之健康问题，均不属于乙方责任范围。 (Congenital diseases, genetic disorders, chromosomal abnormalities, developmental delays, neurological disorders, heart diseases, metabolic diseases, or other health issues pre-existing before birth are strictly excluded from the Caregiver's scope of responsibility.)<br />
+                        5. 婴儿因先天性疾病、遗传因素或出生前健康状况所引起之任何后果，乙方不承担法律责任。 (The Caregiver bears no legal liability for any consequences arising from the baby's congenital diseases, genetic factors, or prenatal health conditions.)<br />
+                        6. 产妇因怀孕期间、生产期间或既有疾病所导致之健康问题，乙方不承担医疗责任。 (The Caregiver bears no medical liability for health problems of the mother resulting from pregnancy, childbirth, or pre-existing medical conditions.)
+                      </p>
+                      <p>
+                        <strong>第四条 紧急情况处理 / Article 4: Emergency Handling</strong><br />
+                        如发生以下情况：婴儿发烧、呼吸困难、昏迷、抽搐、严重黄疸、意外受伤、产妇大量出血、昏厥，乙方有权立即通知家属、拨打急救电话或送医处理。相关医疗费用由甲方承担。<br />
+                        In case of emergencies such as: baby fever, breathing difficulties, coma, convulsions, severe jaundice, accidental injury, heavy maternal bleeding, or fainting, the Caregiver is authorized to immediately notify family members, call emergency services, or seek medical evacuation. All related medical expenses shall be borne by the Client.
+                      </p>
+                      <p>
+                        <strong>第五条 客户责任 / Article 5: Client Responsibilities</strong><br />
+                        甲方应 / The Client shall:<br />
+                        • 如实告知母婴健康状况。 (Truthfully disclose the health status of both mother and baby.)<br />
+                        • 提供安全工作环境。 (Provide a safe working environment.)<br />
+                        • 提供基本住宿（住家月嫂适用）。 (Provide basic accommodation, applicable to live-in caregivers.)<br />
+                        • 提供合理休息时间。 (Provide reasonable rest periods.)<br />
+                        • 配合乙方执行护理计划。 (Cooperate with the Caregiver to execute the care plan.)<br />
+                        • 如甲方隐瞒病史、传染病或特殊情况而导致损失，乙方不承担责任。 (If the Client conceals medical history, infectious diseases, or special conditions resulting in losses, the Caregiver shall bear no responsibility.)
+                      </p>
+                      <p>
+                        <strong>第六条 责任限制 / Article 6: Limitation of Liability</strong><br />
+                        乙方仅对因故意行为或重大疏忽所造成之损失承担责任。对于以下情况，乙方无需承担责任：先天性疾病、遗传疾病、医疗并发症、医院诊断错误、家属未遵守护理建议、不可抗力事件、婴儿自然生理变化。<br />
+                        The Caregiver shall only be liable for losses caused by willful misconduct or gross negligence. Under no circumstances shall the Caregiver be liable for: congenital diseases, genetic disorders, medical complications, hospital misdiagnoses, family members' failure to follow care recommendations, force majeure events, or the baby's natural physiological changes.
+                      </p>
+
+                    </div>
                   </div>
 
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       第二条 服务费用与订金 / Service Fees and Deposit
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontSize: '0.88rem' }}>
-                      <div><strong>服务费用 Fee:</strong> <span style={{ color: 'white' }}>RM {currentViewConfinementContract.serviceFee}</span></div>
-                      <div><strong>订金 Deposit:</strong> <span style={{ color: 'white' }}>RM {currentViewConfinementContract.deposit}</span></div>
-                      <div><strong>尾款 Balance Payment:</strong> <span style={{ color: 'white' }}>RM {currentViewConfinementContract.balance}</span></div>
+                      <div><strong>服务费用 Fee:</strong> <span style={{ color: 'var(--text-main)' }}>RM {currentViewConfinementContract.serviceFee}</span></div>
+                      <div><strong>订金 Deposit:</strong> <span style={{ color: 'var(--text-main)' }}>RM {currentViewConfinementContract.deposit}</span></div>
+                      <div><strong>尾款 Balance Payment:</strong> <span style={{ color: 'var(--text-main)' }}>RM {currentViewConfinementContract.balance}</span></div>
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h4 style={{ color: '#ffffff', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
+                  <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <h4 style={{ color: 'var(--text-light)', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
                       💳 收款账户信息 / Payment Bank Details
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.88rem' }}>
-                      <div><strong>银行名称 Bank Name:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.bankName}</span></div>
-                      <div><strong>账户名称 Account Name:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.accountName}</span></div>
-                      <div><strong>账户号码 Account Number:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.accountNumber}</span></div>
-                      <div><strong>DuitNow:</strong> <span style={{ color: 'white' }}>{currentViewConfinementContract.duitNow || 'N/A'}</span></div>
+                      <div><strong>银行名称 Bank Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.bankName}</span></div>
+                      <div><strong>账户名称 Account Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.accountName}</span></div>
+                      <div><strong>账户号码 Account Number:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.accountNumber}</span></div>
+                      <div><strong>DuitNow:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewConfinementContract.duitNow || 'N/A'}</span></div>
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       工会声明 / Union Declaration
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem', borderRadius: '8px', background: 'var(--bg-main)', fontSize: '0.82rem', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)', padding: '0.85rem', borderRadius: '8px', background: 'var(--bg-main)', fontSize: '0.82rem', lineHeight: '1.5' }}>
                       <p>
                         1. 工会仅作为会员管理、培训及服务配对平台。 / The Union acts solely as a membership, training and matching platform.
                       </p>
@@ -5655,7 +5887,7 @@ export default function CaregiverDashboard() {
 
                   <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '1.5rem', fontSize: '0.88rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1rem' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>甲方（客户/家属）Client Signature</span>
                         {currentViewConfinementContract.clientSignature ? (
                           <>
@@ -5670,7 +5902,7 @@ export default function CaregiverDashboard() {
                           </div>
                         )}
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>乙方（照护人员）Caregiver Signature</span>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#60a5fa', margin: '0.85rem 0' }}>
                           🛡️ {currentViewConfinementContract.caregiverSignature}
@@ -5706,11 +5938,11 @@ export default function CaregiverDashboard() {
                 </button>
 
                 <div className="card" style={{ maxWidth: '800px', margin: '0 auto', padding: '2.5rem' }}>
-                  <h3 style={{ color: '#ffffff', marginBottom: '1.5rem', textAlign: 'center' }}>📋 Generate Confinement Service Agreement / 创建月子照护服务协议</h3>
+                  <h3 style={{ color: 'var(--text-light)', marginBottom: '1.5rem', textAlign: 'center' }}>📋 Generate Confinement Service Agreement / 创建月子照护服务协议</h3>
                   <form onSubmit={submitConfinementContract}>
                     
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         1. Caregiver Information / 照护人员（已预填，工会已核验）
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -5726,7 +5958,7 @@ export default function CaregiverDashboard() {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         2. Pricing & Payments / 服务费用与订金 (RM)
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
@@ -5754,13 +5986,13 @@ export default function CaregiverDashboard() {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         3. Receiving Bank Account / 收款银行信息
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="form-label">Bank Name / 开户银行 *</label>
-                          <select className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }} value={confinementBankName} onChange={(e) => setConfinementBankName(e.target.value)}>
+                          <select className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }} value={confinementBankName} onChange={(e) => setConfinementBankName(e.target.value)}>
                             <option value="Maybank">Maybank</option>
                             <option value="CIMB Bank">CIMB Bank</option>
                             <option value="Public Bank">Public Bank</option>
@@ -5800,7 +6032,7 @@ export default function CaregiverDashboard() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>
+                <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--text-light)' }}>
                   {isRehab ? 'Rehabilitation Care Service Agreement / 康复照护服务协议' : 'Elderly Care Service Agreement / 老人照护服务协议'}
                 </h2>
                 <p style={{ color: 'var(--text-muted)', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
@@ -5837,7 +6069,7 @@ export default function CaregiverDashboard() {
                 gap: '1rem'
               }}>
                 <div style={{ flex: 1 }}>
-                  <strong style={{ color: '#ffffff', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>
+                  <strong style={{ color: 'var(--text-light)', fontSize: '0.95rem', display: 'block', marginBottom: '0.2rem' }}>
                     {isRehab ? '🔗 Share Agreement Link with Client / 分享协议链接给康复客户家属' : '🔗 Share Agreement Link with Client / 分享协议链接给长者家属'}
                   </strong>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -5876,7 +6108,7 @@ export default function CaregiverDashboard() {
                           <td>
                             {c.clientName ? (
                               <div>
-                                <strong style={{ color: '#ffffff' }}>{c.clientName}</strong>
+                                <strong style={{ color: 'var(--text-light)' }}>{c.clientName}</strong>
                                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{c.clientPhone}</div>
                               </div>
                             ) : (
@@ -5884,11 +6116,11 @@ export default function CaregiverDashboard() {
                             )}
                           </td>
                           <td>
-                            <span style={{ color: '#ffffff' }}>{c.serviceDate}</span>
+                            <span style={{ color: 'var(--text-light)' }}>{c.serviceDate}</span>
                             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>🕒 {c.serviceHours}</div>
                           </td>
                           <td>
-                            <strong style={{ color: '#ffffff' }}>RM {c.serviceFee}</strong>
+                            <strong style={{ color: 'var(--text-light)' }}>RM {c.serviceFee}</strong>
                             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Dep: RM {c.deposit}</div>
                           </td>
                           <td>
@@ -5913,7 +6145,9 @@ export default function CaregiverDashboard() {
                                   onClick={() => {
                                     const link = window.location.origin + '/sign-agreement?type=elderly&contractId=' + c.id;
                                     navigator.clipboard.writeText(link);
-                                    alert('Client Signing Link copied to clipboard:\n' + link);
+                                    setShareLink(link);
+                                    setShareType('elderly');
+                                    setShowShareModal(true);
                                   }}
                                   className="btn btn-primary"
                                   style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem' }}
@@ -5941,12 +6175,44 @@ export default function CaregiverDashboard() {
                   ← Back to List / 返回列表
                 </button>
 
-                <div id="elderly-agreement-print-area" className="card animate-fade-in" style={{ padding: '3rem', background: '#0f172a', borderColor: 'rgba(255,255,255,0.08)', color: '#cbd5e1', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
+                {currentViewElderlyContract.status !== 'Signed' && (
+                  <div className="card" style={{ padding: '1.25rem 2rem', marginBottom: '1.5rem', background: 'var(--bg-input)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <strong style={{ color: 'var(--text-light)', fontSize: '0.95rem' }}>🔗 Client Signing Link / 客户签署链接 (Send to Client)</strong>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        className="form-input" 
+                        style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.85rem', background: 'var(--bg-card)', cursor: 'text' }}
+                        value={window.location.origin + '/sign-agreement?type=elderly&contractId=' + currentViewElderlyContract.id}
+                        onClick={(e) => e.target.select()}
+                      />
+                      <button 
+                        onClick={() => {
+                          const link = window.location.origin + '/sign-agreement?type=elderly&contractId=' + currentViewElderlyContract.id;
+                          navigator.clipboard.writeText(link);
+                          setShareLink(link);
+                          setShareType('elderly');
+                          setShowShareModal(true);
+                        }}
+                        className="btn btn-primary"
+                        style={{ padding: '0.65rem 1.5rem', fontSize: '0.88rem' }}
+                      >
+                        📋 Copy Link
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Copy this link and send it to your client. They can open it to fill in their details and sign the agreement.
+                    </span>
+                  </div>
+                )}
+
+                <div id="elderly-agreement-print-area" className="card animate-fade-in" style={{ padding: '3rem', background: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-main)', lineHeight: 1.6, maxWidth: '900px', margin: '0 auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <img src="/mcsa-logo.png" alt="MCSA" style={{ width: '50px', height: '50px', backgroundColor: 'white', borderRadius: '50%', padding: '2px' }} />
                       <div>
-                        <h3 style={{ color: '#ffffff', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
+                        <h3 style={{ color: 'var(--text-light)', margin: 0, fontSize: '1.3rem', fontFamily: 'Outfit' }}>MCSA MALAYSIA</h3>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Elderly Care Agreement / 老人照护协议</span>
                       </div>
                     </div>
@@ -5960,7 +6226,7 @@ export default function CaregiverDashboard() {
                     </div>
                   </div>
 
-                  <h2 style={{ textAlign: 'center', color: '#ffffff', marginBottom: '2rem', fontFamily: 'Outfit', fontSize: '1.8rem' }}>
+                  <h2 style={{ textAlign: 'center', color: 'var(--text-light)', marginBottom: '2rem', fontFamily: 'Outfit', fontSize: '1.8rem' }}>
                     老人照护服务协议 / ELDERLY CARE SERVICE AGREEMENT
                   </h2>
 
@@ -5971,15 +6237,15 @@ export default function CaregiverDashboard() {
                   <div style={{ marginBottom: '2rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                       <div>
-                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                           甲方（客户/家属）Client / Family Representative
                         </h4>
                         {currentViewElderlyContract.clientName ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.88rem' }}>
-                            <div><strong>姓名 Name:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.clientName}</span></div>
-                            <div><strong>身份证/护照号码 NRIC/Passport No.:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.clientNric}</span></div>
-                            <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.clientPhone}</span></div>
-                            <div><strong>地址 Address:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.clientAddress}</span></div>
+                            <div><strong>姓名 Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.clientName}</span></div>
+                            <div><strong>身份证/护照号码 NRIC/Passport No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.clientNric}</span></div>
+                            <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.clientPhone}</span></div>
+                            <div><strong>地址 Address:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.clientAddress}</span></div>
                           </div>
                         ) : (
                           <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.88rem' }}>
@@ -5989,20 +6255,20 @@ export default function CaregiverDashboard() {
                         )}
                       </div>
                       <div>
-                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                        <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                           乙方（照护人员）Caregiver
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.88rem' }}>
-                          <div><strong>姓名 Name:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.caregiverName}</span></div>
-                          <div><strong>会员编号 Membership No.:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.caregiverMemberNo}</span></div>
-                          <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.caregiverPhone}</span></div>
+                          <div><strong>姓名 Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.caregiverName}</span></div>
+                          <div><strong>会员编号 Membership No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.caregiverMemberNo}</span></div>
+                          <div><strong>联系电话 Contact No.:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.caregiverPhone}</span></div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       第一条 服务内容 / Scope of Services
                     </h4>
                     <p style={{ fontSize: '0.88rem', margin: 0, lineHeight: 1.6 }}>
@@ -6016,35 +6282,35 @@ export default function CaregiverDashboard() {
                   </div>
 
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       第二条 服务期限与费用 / Service Period and Fees
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.88rem' }}>
-                      <div><strong>服务日期 Service Date:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.serviceDate}</span></div>
-                      <div><strong>服务时间 Service Hours:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.serviceHours}</span></div>
-                      <div><strong>服务费用 Service Fee:</strong> <span style={{ color: 'white' }}>RM {currentViewElderlyContract.serviceFee}</span></div>
-                      <div><strong>订金 Deposit:</strong> <span style={{ color: 'white' }}>RM {currentViewElderlyContract.deposit}</span></div>
-                      <div style={{ gridColumn: 'span 2' }}><strong>尾款 Balance Payment:</strong> <span style={{ color: 'white' }}>RM {currentViewElderlyContract.balance}</span></div>
+                      <div><strong>服务日期 Service Date:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.serviceDate}</span></div>
+                      <div><strong>服务时间 Service Hours:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.serviceHours}</span></div>
+                      <div><strong>服务费用 Service Fee:</strong> <span style={{ color: 'var(--text-main)' }}>RM {currentViewElderlyContract.serviceFee}</span></div>
+                      <div><strong>订金 Deposit:</strong> <span style={{ color: 'var(--text-main)' }}>RM {currentViewElderlyContract.deposit}</span></div>
+                      <div style={{ gridColumn: 'span 2' }}><strong>尾款 Balance Payment:</strong> <span style={{ color: 'var(--text-main)' }}>RM {currentViewElderlyContract.balance}</span></div>
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <h4 style={{ color: '#ffffff', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
+                  <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <h4 style={{ color: 'var(--text-light)', margin: '0 0 0.75rem 0', fontSize: '0.95rem' }}>
                       💳 收款账户信息 / Payment Bank Details
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.88rem' }}>
-                      <div><strong>银行名称 Bank Name:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.bankName}</span></div>
-                      <div><strong>账户名称 Account Name:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.accountName}</span></div>
-                      <div><strong>账户号码 Account Number:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.accountNumber}</span></div>
-                      <div><strong>DuitNow:</strong> <span style={{ color: 'white' }}>{currentViewElderlyContract.duitNow || 'N/A'}</span></div>
+                      <div><strong>银行名称 Bank Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.bankName}</span></div>
+                      <div><strong>账户名称 Account Name:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.accountName}</span></div>
+                      <div><strong>账户号码 Account Number:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.accountNumber}</span></div>
+                      <div><strong>DuitNow:</strong> <span style={{ color: 'var(--text-main)' }}>{currentViewElderlyContract.duitNow || 'N/A'}</span></div>
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#ffffff', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
+                    <h4 style={{ color: 'var(--text-light)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '0.75rem' }}>
                       照护条款细则 / Terms & Conditions
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid rgba(255,255,255,0.06)', padding: '0.85rem', borderRadius: '8px', background: 'var(--bg-main)', fontSize: '0.82rem', lineHeight: '1.5' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem', border: '1px solid var(--border)', borderLeft: '4px solid var(--accent)', padding: '0.85rem', borderRadius: '8px', background: 'var(--bg-main)', fontSize: '0.82rem', lineHeight: '1.5' }}>
                       <p>
                         <strong>第三条 健康资料披露 / Health Information Disclosure</strong><br />
                         甲方须如实披露长者健康状况，包括慢性疾病、过敏记录、服药情况及其他相关资料。若因隐瞒或错误资料导致损失，乙方无需承担责任。<br />
@@ -6090,7 +6356,7 @@ export default function CaregiverDashboard() {
 
                   <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '1.5rem', fontSize: '0.88rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '1rem' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>甲方（客户/家属）Client Signature</span>
                         {currentViewElderlyContract.clientSignature ? (
                           <>
@@ -6105,7 +6371,7 @@ export default function CaregiverDashboard() {
                           </div>
                         )}
                       </div>
-                      <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '1.25rem', borderRadius: '12px' }}>
+                      <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '1.25rem', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>乙方（照护人员）Caregiver Signature</span>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#60a5fa', margin: '0.85rem 0' }}>
                           🛡️ {currentViewElderlyContract.caregiverSignature}
@@ -6131,7 +6397,9 @@ export default function CaregiverDashboard() {
                       onClick={() => {
                         const link = window.location.origin + '/sign-agreement?type=elderly&contractId=' + currentViewElderlyContract.id;
                         navigator.clipboard.writeText(link);
-                        alert('Signing Link copied to clipboard:\n' + link);
+                        setShareLink(link);
+                        setShareType('elderly');
+                        setShowShareModal(true);
                       }}
                       className="btn btn-outline"
                     >
@@ -6153,13 +6421,13 @@ export default function CaregiverDashboard() {
                 </button>
 
                 <div className="card" style={{ maxWidth: '800px', margin: '0 auto', padding: '2.5rem' }}>
-                  <h3 style={{ color: '#ffffff', marginBottom: '1.5rem', textAlign: 'center' }}>
+                  <h3 style={{ color: 'var(--text-light)', marginBottom: '1.5rem', textAlign: 'center' }}>
                     {isRehab ? '📋 Generate Rehabilitation Care Service Agreement / 创建康复照护服务协议' : '📋 Generate Elderly Care Service Agreement / 创建老人照护服务协议'}
                   </h3>
                   <form onSubmit={submitElderlyContract}>
                     
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         1. Caregiver Information / 照护人员（已预填，工会已核验）
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -6175,7 +6443,7 @@ export default function CaregiverDashboard() {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         2. Service Details & Schedule / 服务期限与时间
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -6191,7 +6459,7 @@ export default function CaregiverDashboard() {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         3. Pricing & Payments / 服务费用与订金 (RM)
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
@@ -6219,13 +6487,13 @@ export default function CaregiverDashboard() {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border)', paddingBottom: '0.4rem', marginBottom: '1.25rem' }}>
                         4. Receiving Bank Account / 收款银行信息
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
                           <label className="form-label">Bank Name / 开户银行 *</label>
-                          <select className="form-input" style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }} value={elderlyBankName} onChange={(e) => setElderlyBankName(e.target.value)}>
+                          <select className="form-input" style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }} value={elderlyBankName} onChange={(e) => setElderlyBankName(e.target.value)}>
                             <option value="CIMB Bank">CIMB Bank</option>
                             <option value="Maybank">Maybank</option>
                             <option value="Public Bank">Public Bank</option>
@@ -6280,12 +6548,11 @@ export default function CaregiverDashboard() {
               maxWidth: '500px',
               padding: '2rem',
               border: '1px solid rgba(255,255,255,0.1)',
-              background: '#0f172a',
-              borderRadius: '20px',
+              background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px',
               boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1.3rem', color: '#ffffff', fontWeight: 700 }}>
+                <h3 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-light)', fontWeight: 700 }}>
                   📅 {lang === 'zh' ? '录入新安排预约' : lang === 'bm' ? 'Atur Temujanji Baru' : 'Book New Care Appointment'}
                 </h3>
                 <button 
@@ -6306,7 +6573,7 @@ export default function CaregiverDashboard() {
                     placeholder="e.g. Grandma Lim"
                     value={newApptClient}
                     onChange={(e) => setNewApptClient(e.target.value)}
-                    style={{ background: 'var(--bg-input)', color: '#fff' }}
+                    style={{ background: 'var(--bg-input)' }}
                   />
                 </div>
 
@@ -6319,7 +6586,7 @@ export default function CaregiverDashboard() {
                       required 
                       value={selectedDateStr}
                       onChange={(e) => setSelectedDateStr(e.target.value)}
-                      style={{ background: 'var(--bg-input)', color: '#fff' }}
+                      style={{ background: 'var(--bg-input)' }}
                     />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
@@ -6331,7 +6598,7 @@ export default function CaregiverDashboard() {
                       placeholder="e.g. 10:30 AM"
                       value={newApptTime}
                       onChange={(e) => setNewApptTime(e.target.value)}
-                      style={{ background: 'var(--bg-input)', color: '#fff' }}
+                      style={{ background: 'var(--bg-input)' }}
                     />
                   </div>
                 </div>
@@ -6345,7 +6612,7 @@ export default function CaregiverDashboard() {
                     placeholder="e.g. Hospital Kuala Lumpur (HKL)"
                     value={newApptLocation}
                     onChange={(e) => setNewApptLocation(e.target.value)}
-                    style={{ background: 'var(--bg-input)', color: '#fff' }}
+                    style={{ background: 'var(--bg-input)' }}
                   />
                 </div>
 
@@ -6357,7 +6624,7 @@ export default function CaregiverDashboard() {
                     value={newApptDetails}
                     onChange={(e) => setNewApptDetails(e.target.value)}
                     rows={3}
-                    style={{ background: 'var(--bg-input)', color: '#fff', resize: 'vertical' }}
+                    style={{ background: 'var(--bg-input)', resize: 'vertical' }}
                   />
                 </div>
 
@@ -6367,7 +6634,7 @@ export default function CaregiverDashboard() {
                     className="form-input"
                     value={newApptStatus}
                     onChange={(e) => setNewApptStatus(e.target.value)}
-                    style={{ background: 'var(--bg-input)', color: '#fff', cursor: 'pointer' }}
+                    style={{ background: 'var(--bg-input)', cursor: 'pointer' }}
                   >
                     <option value="Scheduled">{lang === 'zh' ? '已安排 (Scheduled)' : lang === 'bm' ? 'Dijadual' : 'Scheduled'}</option>
                     <option value="In Progress">{lang === 'zh' ? '进行中 (In Progress)' : lang === 'bm' ? 'Aktif' : 'In Progress'}</option>
@@ -6380,14 +6647,14 @@ export default function CaregiverDashboard() {
                     type="button" 
                     onClick={() => setShowAddApptModal(false)}
                     className="btn btn-outline" 
-                    style={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
+                    style={{ flex: 1, borderColor: 'var(--border)', color: 'var(--text-main)' }}
                   >
                     {lang === 'zh' ? '取消' : lang === 'bm' ? 'Batal' : 'Cancel'}
                   </button>
                   <button 
                     type="submit" 
                     className="btn btn-primary" 
-                    style={{ flex: 1, background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600 }}
+                    style={{ flex: 1, background: 'var(--primary)', border: 'none', fontWeight: 600 }}
                   >
                     {lang === 'zh' ? '确认添加预约' : lang === 'bm' ? 'Atur Sekarang' : 'Confirm Book'}
                   </button>
@@ -6416,7 +6683,7 @@ export default function CaregiverDashboard() {
           <div style={{
             backgroundColor: '#1e293b',
             borderRadius: '20px',
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: '1px solid var(--border)',
             width: '100%',
             maxWidth: '680px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
@@ -6427,12 +6694,12 @@ export default function CaregiverDashboard() {
             {/* Modal Header */}
             <div style={{
               padding: '1.25rem 2rem',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }} className="no-print">
-              <h3 style={{ margin: 0, color: 'white', fontSize: '1.2rem', fontWeight: 800 }}>
+              <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.2rem', fontWeight: 800 }}>
                 {lang === 'zh' ? '自雇人士报税收据生成器' : lang === 'bm' ? 'Penjana Resit Cukai Swakerja' : 'Self-Employed Tax Receipt Generator'}
               </h3>
               <button
@@ -6453,7 +6720,7 @@ export default function CaregiverDashboard() {
             <div style={{ padding: '2rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               
               {/* Receipt Parameters Form */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }} className="no-print">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }} className="no-print">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label" style={{ fontSize: '0.75rem' }}>
                     {lang === 'zh' ? '实收金额 (RM)' : lang === 'bm' ? 'Jumlah Bayaran (RM)' : 'Billed Service Fee (RM)'}
@@ -6463,7 +6730,7 @@ export default function CaregiverDashboard() {
                     className="form-input"
                     value={receiptFee}
                     onChange={(e) => setReceiptFee(e.target.value)}
-                    style={{ background: '#0f172a', width: '100%' }}
+                    style={{ background: 'var(--bg-card)', width: '100%' }}
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
@@ -6475,7 +6742,7 @@ export default function CaregiverDashboard() {
                     className="form-input"
                     value={providerNric}
                     onChange={(e) => setProviderNric(e.target.value)}
-                    style={{ background: '#0f172a', width: '100%' }}
+                    style={{ background: 'var(--bg-card)', width: '100%' }}
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
@@ -6488,7 +6755,7 @@ export default function CaregiverDashboard() {
                     placeholder="e.g. 800101-14-5566"
                     value={clientNric}
                     onChange={(e) => setClientNric(e.target.value)}
-                    style={{ background: '#0f172a', width: '100%' }}
+                    style={{ background: 'var(--bg-card)', width: '100%' }}
                   />
                 </div>
               </div>
@@ -6649,7 +6916,7 @@ export default function CaregiverDashboard() {
               <button
                 onClick={() => setShowReceiptModal(false)}
                 className="btn btn-outline"
-                style={{ fontSize: '0.9rem', padding: '0.5rem 1.25rem' }}
+                style={{ fontSize: '0.9rem', padding: '0.5rem 1.25rem', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}
               >
                 {lang === 'zh' ? '关闭' : lang === 'bm' ? 'Tutup' : 'Close'}
               </button>
@@ -6682,9 +6949,9 @@ export default function CaregiverDashboard() {
           zIndex: 110,
           padding: '2rem'
         }}>
-          <div className="card animate-fade-in" style={{ maxWidth: '480px', width: '100%', padding: '2rem', background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.25rem', fontFamily: 'Outfit' }}>
+          <div className="card animate-fade-in" style={{ maxWidth: '480px', width: '100%', padding: '2rem', background: '#1e293b', border: '1px solid var(--border)', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-light)', fontSize: '1.25rem', fontFamily: 'Outfit' }}>
                 📅 {lang === 'zh' ? '调整服务排班日程' : lang === 'bm' ? 'Ubah Tarikh Syif' : 'Adjust Service Schedule'}
               </h3>
               <button 
@@ -6742,7 +7009,7 @@ export default function CaregiverDashboard() {
                   type="button" 
                   onClick={() => { setShowAdjustModal(false); setSelectedApptToAdjust(null); }}
                   className="btn btn-outline"
-                  style={{ padding: '0.5rem 1.25rem', borderRadius: '8px' }}
+                  style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}
                 >
                   {lang === 'zh' ? '取消' : 'Cancel'}
                 </button>
@@ -6781,13 +7048,13 @@ export default function CaregiverDashboard() {
             width: '100%',
             padding: '2.5rem',
             background: '#1e293b',
-            border: '1px solid rgba(255,255,255,0.08)',
+            border: '1px solid var(--border)',
             borderRadius: '24px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
           }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.35rem', fontFamily: 'Outfit, sans-serif', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-light)', fontSize: '1.35rem', fontFamily: 'Outfit, sans-serif', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <CreditCard size={22} style={{ color: 'var(--primary)' }} />
                 {lang === 'zh' ? '公会年度会员费续期' : lang === 'bm' ? 'Pembaharuan Keahlian Tahunan' : 'Annual Membership Fee Renewal'}
               </h3>
@@ -6803,7 +7070,7 @@ export default function CaregiverDashboard() {
               {/* Caregiver Profile Summary */}
               <div style={{
                 background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.05)',
+                border: '1px solid var(--border)',
                 padding: '1rem 1.25rem',
                 borderRadius: '12px',
                 marginBottom: '1.5rem',
@@ -6815,7 +7082,7 @@ export default function CaregiverDashboard() {
                   <img src={member?.photo} alt={member?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: 'bold' }}>{member?.name}</div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-light)', fontWeight: 'bold' }}>{member?.name}</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                     {lang === 'zh' ? `会员卡号：${member?.member_number}` : `Member No: ${member?.member_number}`} &bull; 
                     <span style={{ color: 'var(--accent)', marginLeft: '0.25rem', fontWeight: 'bold' }}>
@@ -6856,7 +7123,7 @@ export default function CaregiverDashboard() {
                           onChange={() => setRenewalYears(plan.years)}
                           style={{ accentColor: 'var(--primary)', cursor: 'pointer', width: '16px', height: '16px' }}
                         />
-                        <span style={{ fontSize: '0.9rem', color: '#ffffff', fontWeight: renewalYears === plan.years ? 'bold' : 'normal' }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-light)', fontWeight: renewalYears === plan.years ? 'bold' : 'normal' }}>
                           {lang === 'zh' ? plan.labelZh : lang === 'bm' ? plan.labelBm : plan.labelEn}
                         </span>
                       </div>
@@ -6905,7 +7172,7 @@ export default function CaregiverDashboard() {
                   <select 
                     className="form-input" 
                     required
-                    style={{ background: 'var(--bg-input)', color: '#ffffff', cursor: 'pointer' }}
+                    style={{ background: 'var(--bg-input)', color: 'var(--text-light)', cursor: 'pointer' }}
                     value={paymentAccount}
                     onChange={(e) => setPaymentAccount(e.target.value)}
                   >
@@ -6983,7 +7250,7 @@ export default function CaregiverDashboard() {
                   onClick={() => setShowRenewalModal(false)}
                   disabled={isRenewing}
                   className="btn btn-outline" 
-                  style={{ flex: 1, borderColor: 'rgba(255,255,255,0.1)', color: '#fff', padding: '0.65rem' }}
+                  style={{ flex: 1, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff', padding: '0.65rem' }}
                 >
                   {lang === 'zh' ? '取消' : lang === 'bm' ? 'Batal' : 'Cancel'}
                 </button>
@@ -6995,7 +7262,6 @@ export default function CaregiverDashboard() {
                     flex: 1, 
                     background: 'var(--primary)', 
                     border: 'none', 
-                    color: '#fff', 
                     fontWeight: 600,
                     display: 'flex',
                     alignItems: 'center',
@@ -7072,6 +7338,126 @@ export default function CaregiverDashboard() {
         onClose={() => setShowLightbox(false)}
         onChangeIndex={setLightboxIndex}
       />
+
+      {showShareModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(11, 19, 41, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          padding: '2rem'
+        }}>
+          <div className="card animate-fade-in" style={{
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2.5rem',
+            background: '#1e293b',
+            border: '1px solid var(--border)',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            color: '#ffffff'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.25rem', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🔗 {lang === 'zh' ? '分享协议给客户' : lang === 'bm' ? 'Kongsi Pautan Tandatangan' : 'Share Signing Link'}
+              </h3>
+              <button 
+                onClick={() => setShowShareModal(false)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '1.25rem', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              {lang === 'zh' 
+                ? '客户协议签署网址已成功复制到剪贴板。点击下方绿色按钮即可通过 WhatsApp 直接发送给客户：' 
+                : 'Signing link has been successfully copied to clipboard. Click the green button below to share directly via WhatsApp:'}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1.5rem' }}>
+              <label style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', fontWeight: 700 }}>
+                {lang === 'zh' ? '协议签署网址 (URL)' : 'Signing URL'}
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input 
+                  type="text" 
+                  readOnly 
+                  className="form-input" 
+                  style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.8rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', cursor: 'text' }}
+                  value={shareLink}
+                  onClick={(e) => e.target.select()}
+                />
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareLink);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="btn btn-outline"
+                  style={{ padding: '0 1.25rem', fontSize: '0.82rem', borderColor: copied ? '#10b981' : 'rgba(255,255,255,0.2)', color: copied ? '#10b981' : '#ffffff', transition: 'all 0.2s' }}
+                >
+                  {copied ? (lang === 'zh' ? '已复制 ✓' : 'Copied ✓') : (lang === 'zh' ? '复制' : 'Copy')}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <a 
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                  shareType === 'confinement' 
+                    ? (lang === 'zh' 
+                        ? `您好！请点击此链接查看并签署您的 MCSA 产后护理服务协议：\n${shareLink}`
+                        : `Hi! Please click here to review and sign your MCSA Postnatal Care Service Agreement:\n${shareLink}`)
+                    : shareType === 'elderly'
+                      ? (lang === 'zh'
+                          ? `您好！请点击此链接查看并签署您的 MCSA 老人照护服务协议：\n${shareLink}`
+                          : `Hi! Please click here to review and sign your MCSA Elderly Care Service Agreement:\n${shareLink}`)
+                      : (lang === 'zh'
+                          ? `您好！请点击此链接查看并签署您的 MCSA 就医陪诊服务协议：\n${shareLink}`
+                          : `Hi! Please click here to review and sign your MCSA Medical Escort Service Agreement:\n${shareLink}`)
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  background: '#25d366',
+                  color: '#ffffff',
+                  padding: '0.8rem',
+                  borderRadius: '12px',
+                  textDecoration: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'none'}
+              >
+                💬 {lang === 'zh' ? '发送到 WhatsApp' : 'Share on WhatsApp'}
+              </a>
+
+              <button 
+                onClick={() => setShowShareModal(false)}
+                className="btn btn-outline"
+                style={{ padding: '0.8rem', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, borderColor: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+              >
+                {lang === 'zh' ? '关闭' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}`
 
       </main>
     </div>

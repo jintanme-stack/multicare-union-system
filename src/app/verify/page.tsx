@@ -213,7 +213,7 @@ export default function VerifyPage() {
                       {/* Member Info */}
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <div>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block' }}>
                             {lang === 'zh' ? '会员执照编号' : lang === 'bm' ? 'ID Keahlian' : 'Membership ID'}
                           </span>
                           <span style={{ fontSize: '1.25rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.05em' }}>
@@ -221,7 +221,7 @@ export default function VerifyPage() {
                           </span>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>{t.verify.specialty}</span>
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block' }}>{t.verify.specialty}</span>
                           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent)' }}>
                             {member.category}
                           </span>
@@ -231,29 +231,34 @@ export default function VerifyPage() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <div>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>{t.verify.holderName}</span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block' }}>{t.verify.holderName}</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff' }}>{member.name}</span>
                       </div>
                       
                       {/* Status stamp */}
                       <div style={{
-                        border: '2px solid var(--health)',
-                        color: 'var(--health)',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.7rem',
-                        fontWeight: 'bold',
-                        transform: 'rotate(-5deg)',
+                        border: '1.5px solid #10b981',
+                        color: '#34d399',
+                        padding: '0.25rem 0.65rem',
+                        borderRadius: '9999px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
                         textTransform: 'uppercase',
-                        backgroundColor: 'var(--bg-main)',
+                        letterSpacing: '0.05em',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
                         marginRight: 'auto',
-                        marginLeft: '1rem'
+                        marginLeft: '1.5rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        boxShadow: '0 0 10px rgba(16, 185, 129, 0.2)',
+                        transform: 'rotate(-3deg)'
                       }}>
                         ✓ {t.verify.activeStatus}
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>{t.verify.expiration}</span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', display: 'block' }}>{t.verify.expiration}</span>
                         <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', fontFamily: 'monospace' }}>{member.expiry}</span>
                       </div>
                     </div>
@@ -273,22 +278,22 @@ export default function VerifyPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.holderName}</span>
-                          <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.name}</strong>
+                          <strong style={{ fontSize: '1.05rem', color: 'var(--text-light)' }}>{member.name}</strong>
                         </div>
                         <div>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{lang === 'zh' ? '登记类目' : lang === 'bm' ? 'Kategori Daftar' : 'Registry Category'}</span>
-                          <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.category}</strong>
+                          <strong style={{ fontSize: '1.05rem', color: 'var(--text-light)' }}>{member.category}</strong>
                         </div>
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.primaryLocation}</span>
-                          <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.location || 'Kuala Lumpur'}</strong>
+                          <strong style={{ fontSize: '1.05rem', color: 'var(--text-light)' }}>{member.location || 'Kuala Lumpur'}</strong>
                         </div>
                         <div>
                           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase' }}>{t.verify.experience}</span>
-                          <strong style={{ fontSize: '1.05rem', color: '#ffffff' }}>{member.exp}</strong>
+                          <strong style={{ fontSize: '1.05rem', color: 'var(--text-light)' }}>{member.exp}</strong>
                         </div>
                       </div>
 

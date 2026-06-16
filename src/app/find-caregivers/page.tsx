@@ -80,7 +80,7 @@ export default function FindCaregiversPage() {
                 <Filter size={16} style={{ position: 'absolute', left: '14px', top: '15px', color: 'var(--text-muted)' }} />
                 <select
                   className="form-input"
-                  style={{ width: '100%', paddingLeft: '38px', height: '46px', background: 'var(--bg-input)', color: 'white', cursor: 'pointer' }}
+                  style={{ width: '100%', paddingLeft: '38px', height: '46px', background: 'var(--bg-input)', color: 'var(--text-main)', cursor: 'pointer' }}
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                 >
@@ -109,7 +109,7 @@ export default function FindCaregiversPage() {
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                       <div>
-                        <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 0.25rem 0' }}>{m.name}</h3>
+                        <h3 style={{ fontSize: '1.25rem', color: 'var(--text-light)', margin: '0 0 0.25rem 0' }}>{m.name}</h3>
                         <span className="badge badge-active" style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}>
                           {m.category}
                         </span>
@@ -137,7 +137,7 @@ export default function FindCaregiversPage() {
                     </p>
 
                     {/* Meta stats */}
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.82rem', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.82rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-main)' }}>
                         <Briefcase size={14} style={{ color: 'var(--primary)' }} /> {m.exp} exp
                       </span>
@@ -149,8 +149,8 @@ export default function FindCaregiversPage() {
 
                   {/* Masked Contact Info Panel */}
                   <div style={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.4)',
-                    border: '1px dashed rgba(255, 255, 255, 0.08)',
+                    backgroundColor: 'var(--bg-input)',
+                    border: '1px dashed var(--border)',
                     borderRadius: '12px',
                     padding: '1rem',
                     fontSize: '0.8rem',
@@ -161,7 +161,7 @@ export default function FindCaregiversPage() {
                     <div style={{ display: 'flex', justifyItems: 'center', alignItems: 'center', gap: '0.5rem' }}>
                       <Phone size={14} style={{ color: 'var(--primary)', opacity: 0.6 }} />
                       <span style={{ color: 'var(--text-muted)' }}>Phone: </span>
-                      <span style={{ filter: 'blur(3.5px)', userSelect: 'none', backgroundColor: '#334155', padding: '0 0.4rem', borderRadius: '3px' }}>
+                      <span style={{ filter: 'blur(3.5px)', userSelect: 'none', backgroundColor: '#cbd5e1', padding: '0 0.4rem', borderRadius: '3px' }}>
                         {m.phone}
                       </span>
                     </div>
@@ -169,7 +169,7 @@ export default function FindCaregiversPage() {
                     <div style={{ display: 'flex', justifyItems: 'center', alignItems: 'center', gap: '0.5rem' }}>
                       <Mail size={14} style={{ color: 'var(--primary)', opacity: 0.6 }} />
                       <span style={{ color: 'var(--text-muted)' }}>Email: </span>
-                      <span style={{ filter: 'blur(3.5px)', userSelect: 'none', backgroundColor: '#334155', padding: '0 0.4rem', borderRadius: '3px' }}>
+                      <span style={{ filter: 'blur(3.5px)', userSelect: 'none', backgroundColor: '#cbd5e1', padding: '0 0.4rem', borderRadius: '3px' }}>
                         {m.email}
                       </span>
                     </div>

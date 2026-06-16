@@ -20,6 +20,7 @@ export default function FamilyPortal() {
   const [reportsHistory, setReportsHistory] = useState<any[]>([]);
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [showReportHistoryDetail, setShowReportHistoryDetail] = useState(false);
+  const [showEscortReportModal, setShowEscortReportModal] = useState(false);
 
   // Lightbox viewer states
   const [showLightbox, setShowLightbox] = useState(false);
@@ -41,81 +42,90 @@ export default function FamilyPortal() {
       return;
     }
 
-    const requests = store.getCareRequests();
-    const found = requests.find((r: any) => 
-      r.email && r.email.toLowerCase().trim() === email.toLowerCase().trim()
-    );
+    const initData = () => {
+      const requests = store.getCareRequests();
+      const found = requests.find((r: any) => 
+        r.email && r.email.toLowerCase().trim() === email.toLowerCase().trim()
+      );
 
-    if (!found) {
-      alert(store.getLanguage() === 'zh'
-        ? '⚠️ 您的登录会话已过期或无效。请重新登录。'
-        : store.getLanguage() === 'bm'
-        ? '⚠️ Sesi log masuk tidak sah. Sila log masuk semula.'
-        : '⚠️ Your login session is invalid. Please log in again.');
-      localStorage.removeItem('mcsa_client_email');
-      window.location.href = '/login';
-      return;
-    }
+      if (!found) {
+        alert(store.getLanguage() === 'zh'
+          ? '⚠️ 您的登录会话已过期或无效。请重新登录。'
+          : store.getLanguage() === 'bm'
+          ? '⚠️ Sesi log masuk tidak sah. Sila log masuk semula.'
+          : '⚠️ Your login session is invalid. Please log in again.');
+        localStorage.removeItem('mcsa_client_email');
+        window.location.href = '/login';
+        return;
+      }
 
-    setPatientName(`${found.name}'s Family Case`);
-    setCareType(found.category);
-    
-    // Load confinement reports history
-    const history = JSON.parse(localStorage.getItem('mcsa_confinement_history') || '[]');
-    setReportsHistory(history);
-    
-    let sessionActive = false;
-
-    if (found.category === 'Confinement Care' || found.category === 'Babysitter Service') {
-      setAssignedCaregiver('Meizhen Chen (MCSA-2026-1112)');
-      setCaregiverPhone('019-3322114');
+      setPatientName(`${found.name}'s Family Case`);
+      setCareType(found.category);
       
-      const storedConf = localStorage.getItem('mcsa_active_confinement_session');
-      if (storedConf) {
-        const parsed = JSON.parse(storedConf);
-        if (parsed.isShared) {
-          setActiveConfinement(parsed);
-          setPatientName(`${parsed.babyName} (${parsed.babyAgeDays} Days Old)`);
-          setCareType("Baby Confinement Care / 母婴月嫂照护");
-          setAssignedCaregiver("Meizhen Chen (MCSA-2026-1112)");
-          setCaregiverPhone("019-3322114");
-          sessionActive = true;
-        }
-      }
-    } else if (found.category === 'Patient Companion' || found.category === 'Outpatient Medical Escort') {
-      setAssignedCaregiver('Li Xiulan (MCSA-2026-0009)');
-      setCaregiverPhone('012-8888776');
+      // Load confinement reports history
+      const history = JSON.parse(localStorage.getItem('mcsa_confinement_history') || '[]');
+      setReportsHistory(history);
+      
+      let sessionActive = false;
 
-      const stored = localStorage.getItem('mcsa_active_escort_session');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.isShared) {
-          setActiveSession(parsed);
-          setPatientName(`${parsed.patientName} (${parsed.patientAge} Years Old)`);
-          setCareType("Outpatient Medical Escort / 就医陪诊");
-          setAssignedCaregiver("Li Xiulan (MCSA-2026-0009)");
-          setCaregiverPhone("012-8888776");
-          sessionActive = true;
+      if (found.category === 'Confinement Care' || found.category === 'Babysitter Service') {
+        setAssignedCaregiver('Meizhen Chen (MCSA-2026-1112)');
+        setCaregiverPhone('019-3322114');
+        
+        const storedConf = localStorage.getItem('mcsa_active_confinement_session');
+        if (storedConf) {
+          const parsed = JSON.parse(storedConf);
+          if (parsed.isShared) {
+            setActiveConfinement(parsed);
+            setPatientName(`${parsed.babyName} (${parsed.babyAgeDays} Days Old)`);
+            setCareType("Baby Confinement Care / 母婴月嫂照护");
+            setAssignedCaregiver("Meizhen Chen (MCSA-2026-1112)");
+            setCaregiverPhone("019-3322114");
+            sessionActive = true;
+          }
         }
-      }
-    } else {
-      setAssignedCaregiver('Li Xiulan (MCSA-2026-0009)');
-      setCaregiverPhone('012-8888776');
+      } else if (found.category === 'Patient Companion' || found.category === 'Outpatient Medical Escort') {
+        setAssignedCaregiver('Li Xiulan (MCSA-2026-0009)');
+        setCaregiverPhone('012-8888776');
 
-      const storedElder = localStorage.getItem('mcsa_active_elder_session');
-      if (storedElder) {
-        const parsed = JSON.parse(storedElder);
-        if (parsed.isShared) {
-          setActiveElder(parsed);
-          setPatientName(`${parsed.patientName} (${parsed.patientAge} Years Old)`);
-          setCareType("Elderly Care / 长者日常照护");
-          setAssignedCaregiver("Li Xiulan (MCSA-2026-0009)");
-          setCaregiverPhone("012-8888776");
-          sessionActive = true;
+        const stored = localStorage.getItem('mcsa_active_escort_session');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.isShared) {
+            setActiveSession(parsed);
+            setPatientName(`${parsed.patientName} (${parsed.patientAge} Years Old)`);
+            setCareType("Outpatient Medical Escort / 就医陪诊");
+            setAssignedCaregiver("Li Xiulan (MCSA-2026-0009)");
+            setCaregiverPhone("012-8888776");
+            sessionActive = true;
+          }
+        }
+      } else {
+        setAssignedCaregiver('Li Xiulan (MCSA-2026-0009)');
+        setCaregiverPhone('012-8888776');
+
+        const storedElder = localStorage.getItem('mcsa_active_elder_session');
+        if (storedElder) {
+          const parsed = JSON.parse(storedElder);
+          if (parsed.isShared) {
+            setActiveElder(parsed);
+            setPatientName(`${parsed.patientName} (${parsed.patientAge} Years Old)`);
+            setCareType("Elderly Care / 长者日常照护");
+            setAssignedCaregiver("Li Xiulan (MCSA-2026-0009)");
+            setCaregiverPhone("012-8888776");
+            sessionActive = true;
+          }
         }
       }
-    }
-    setIsSessionActive(sessionActive);
+      setIsSessionActive(sessionActive);
+    };
+
+    initData();
+
+    // Pull fresh data from cloud in background and refresh UI states
+    store.pullFromCloud().then(() => {
+      initData();
+    }).catch((e) => console.error("Portal pull error:", e));
   }, []);
   
   const dailyVitals = [
@@ -192,30 +202,41 @@ export default function FamilyPortal() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          background: 'linear-gradient(90deg, rgba(37,99,235,0.08) 0%, rgba(30,41,59,0.5) 100%)', 
+          background: 'linear-gradient(90deg, var(--primary-light) 0%, var(--bg-card) 100%)', 
           borderLeft: '5px solid var(--primary)',
           borderRadius: '16px',
           padding: '1.5rem 2rem'
         }}>
           <div>
-            <h3 style={{ fontSize: '1.15rem', color: '#ffffff', margin: '0 0 0.25rem 0' }}>Active Service Assignment / 当前服务派单</h3>
+            <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', margin: '0 0 0.25rem 0' }}>Active Service Assignment / 当前服务派单</h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0 }}>
-              Assigned Companion: <strong style={{ color: '#ffffff' }}>{assignedCaregiver}</strong> &bull; Care Segment: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{careType}</span>
+              Assigned Companion: <strong style={{ color: 'var(--text-light)' }}>{assignedCaregiver}</strong> &bull; Care Segment: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{careType}</span>
             </p>
           </div>
-          <button 
-            onClick={() => alert(`Dialing assigned companion hotline: ${caregiverPhone}`)}
-            className="btn btn-primary"
-            style={{ padding: '0.75rem 1.5rem', borderRadius: '10px' }}
-          >
-            <PhoneCall size={16} /> Call Companion
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }} className="no-print">
+            {activeSession && (careType.includes('Escort') || careType.includes('Companion') || careType.includes('陪诊')) && (
+              <button 
+                onClick={() => setShowEscortReportModal(true)}
+                className="btn btn-outline"
+                style={{ padding: '0.75rem 1.25rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: 'var(--text-light)', borderColor: 'var(--border)' }}
+              >
+                <FileText size={16} style={{ color: 'var(--accent)' }} /> {lang === 'zh' ? '预览并导出PDF报告' : 'Print/Export PDF'}
+              </button>
+            )}
+            <button 
+              onClick={() => alert(`Dialing assigned companion hotline: ${caregiverPhone}`)}
+              className="btn btn-primary"
+              style={{ padding: '0.75rem 1.5rem', borderRadius: '10px' }}
+            >
+              <PhoneCall size={16} /> Call Companion
+            </button>
+          </div>
         </div>
 
         {!isSessionActive ? (
           <div className="card animate-fade-in" style={{
-            background: 'rgba(30, 41, 59, 0.4)',
-            border: '1px dashed rgba(255, 255, 255, 0.12)',
+            background: 'var(--primary-light)',
+            border: '1px dashed var(--primary)',
             padding: '3.5rem 2.5rem',
             borderRadius: '20px',
             textAlign: 'center',
@@ -235,7 +256,7 @@ export default function FamilyPortal() {
               <ShieldAlert size={36} style={{ color: 'var(--accent)' }} />
             </div>
             
-            <h3 style={{ fontSize: '1.5rem', color: '#ffffff', marginBottom: '1rem', fontFamily: 'Outfit' }}>
+            <h3 style={{ fontSize: '1.5rem', color: 'var(--text-light)', marginBottom: '1rem', fontFamily: 'Outfit' }}>
               {lang === 'zh' ? '🔒 实时照护追踪未开启' : lang === 'bm' ? '🔒 Pengesan Penjagaan Belum Aktif' : '🔒 Live Care Tracker Not Active'}
             </h3>
             
@@ -260,7 +281,7 @@ export default function FamilyPortal() {
               maxWidth: '500px'
             }}>
               <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>🔑</span>
-              <div style={{ color: '#ffffff' }}>
+              <div style={{ color: 'var(--text-main)' }}>
                 <strong>{lang === 'zh' ? '安全认证已锁：' : lang === 'bm' ? 'Kredensial Akses:' : 'Security Status:'}</strong>
                 <div style={{ color: 'var(--text-muted)', marginTop: '0.2rem', fontSize: '0.8rem' }}>
                   {lang === 'zh' ? '授权电子邮箱：' : lang === 'bm' ? 'E-mel:' : 'Email:'} <code style={{ color: '#60a5fa' }}>{clientEmail}</code><br />
@@ -294,7 +315,7 @@ export default function FamilyPortal() {
                     />
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)' }}>
                       {activeConfinement.babyName} Wellness Profile
                     </h3>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -303,7 +324,7 @@ export default function FamilyPortal() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem', background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem', background: 'transparent', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <div>🌡️ <strong>Body Temperature:</strong> <span style={{ color: '#ec4899', fontWeight: 'bold' }}>{activeConfinement.healthCheck?.temp || '36.6'} °C</span></div>
                   <div>🍥 <strong>Umbilical Cord:</strong> <span style={{ color: 'var(--health)', fontWeight: 'bold' }}>{activeConfinement.healthCheck?.umbilicalStatus || 'Dry & Healing'}</span></div>
                 </div>
@@ -311,7 +332,7 @@ export default function FamilyPortal() {
 
               {/* Jaundice Monitoring Chart Card */}
               <div className="card" style={{ margin: 0, padding: '1.75rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   🟡 Transcutaneous Jaundice Levels / 黄疸指标实时比对
                 </h3>
                 
@@ -322,7 +343,7 @@ export default function FamilyPortal() {
                     { label: 'Chest / 胸部黄疸', val: Number(activeConfinement.healthCheck?.jaundiceChest || 7.5), color: '#10b981', max: 15 }
                   ].map((bar, idx) => (
                     <div key={idx}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#cbd5e1', marginBottom: '0.2rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
                         <span>{bar.label}</span>
                         <strong>{bar.val} mg/dL ({bar.val < 10 ? 'Safe / 正常安全' : 'Caution / 警戒'})</strong>
                       </div>
@@ -336,7 +357,7 @@ export default function FamilyPortal() {
 
               {/* Activities Checked Card */}
               <div className="card" style={{ margin: 0, padding: '1.75rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem' }}>
                   🚿 Care Activities Accomplished / 今日已完照护项目
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -378,7 +399,7 @@ export default function FamilyPortal() {
               {/* Nutritional Feed Intake Card */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '5px solid #ec4899' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', color: '#ffffff', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', margin: 0 }}>
                     🍼 Nutritional Feeding Stream / 今日喂养记录
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: '#f472b6', fontWeight: 'bold' }}>
@@ -388,7 +409,7 @@ export default function FamilyPortal() {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.25rem' }}>
                   {activeConfinement.feedingLog && activeConfinement.feedingLog.map((log: any) => (
-                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.01)', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.85rem' }}>
+                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.01)', padding: '0.6rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem' }}>
                       <span style={{ color: '#f472b6', fontWeight: 600 }}>🕒 {log.time}</span>
                       <span>{log.type === 'Breast' ? `Breastfeed (${log.breastLeftMins}m L / ${log.breastRightMins}m R)` : `Formula Feed (${log.formulaMl}ml)`}</span>
                     </div>
@@ -398,14 +419,14 @@ export default function FamilyPortal() {
 
               {/* Diaper & Sleep Logs Card */}
               <div className="card" style={{ margin: 0, padding: '1.75rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem' }}>
                   💩 Diaper Output & Sleep Logs / 尿布排便与睡眠
                 </h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   {activeConfinement.diaperRecord && activeConfinement.diaperRecord.slice(0, 3).map((log: any) => (
                     <div key={log.id} style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', fontSize: '0.82rem', lineHeight: 1.4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontWeight: 600, marginBottom: '0.2rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-main)', fontWeight: 600, marginBottom: '0.2rem' }}>
                         <span>🕒 {log.time} - Diaper Change</span>
                         <span style={{ color: 'var(--health)' }}>Stool: {log.stoolColor} ({log.texture})</span>
                       </div>
@@ -421,7 +442,7 @@ export default function FamilyPortal() {
             {/* Live Care Photo Gallery */}
             <div style={{ gridColumn: '1 / -1', marginTop: '2rem' }}>
               <div className="card" style={{ padding: '1.75rem', borderLeft: '4px solid #3b82f6', background: 'rgba(30, 41, 59, 0.4)' }}>
-                <h3 style={{ fontSize: '1.2rem', color: '#ffffff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-light)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit' }}>
                   📸 {lang === 'zh' ? '实时服务照护相册' : lang === 'bm' ? 'Galeri Foto Penjagaan Langsung' : 'Live Daily Care Photo Gallery'}
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -476,7 +497,7 @@ export default function FamilyPortal() {
             {/* Collapsible History Section */}
             <div style={{ gridColumn: '1 / -1', marginTop: '2rem' }}>
               <div className="card" style={{ padding: '1.75rem', borderLeft: '4px solid #ec4899', background: 'rgba(30, 41, 59, 0.4)' }}>
-                <h3 style={{ fontSize: '1.2rem', color: '#ffffff', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-light)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit' }}>
                   📜 {lang === 'zh' ? '宝宝往期历史健康日志' : lang === 'bm' ? 'Arkib Laporan Kesihatan Bayi' : 'Past Baby Daily Vitals Archive'} ({reportsHistory.length})
                 </h3>
                 
@@ -510,7 +531,7 @@ export default function FamilyPortal() {
                           </span>
                           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>📅 {rep.date}</span>
                         </div>
-                        <h4 style={{ color: '#ffffff', fontSize: '0.92rem', margin: '0 0 0.25rem 0' }}>Report for: {rep.babyName}</h4>
+                        <h4 style={{ color: 'var(--text-light)', fontSize: '0.92rem', margin: '0 0 0.25rem 0' }}>Report for: {rep.babyName}</h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
                           🍼 {rep.feedingLog ? rep.feedingLog.length : 0} feeds &bull; 💩 {rep.diaperRecord ? rep.diaperRecord.length : 0} diapers
                         </p>
@@ -550,7 +571,7 @@ export default function FamilyPortal() {
                     />
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontFamily: 'Outfit, sans-serif' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-light)', fontFamily: 'Outfit, sans-serif' }}>
                       {activeElder.patientName} {lang === 'zh' ? '日常照护档案' : 'Daily Care Profile'}
                     </h3>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -606,7 +627,7 @@ export default function FamilyPortal() {
 
               {/* Care Activities Checklist */}
               <div className="card" style={{ margin: 0, padding: '1.75rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
                   🧺 {lang === 'zh' ? '今日已完成照护项目' : 'Care Activities & Milestones Completed'}
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -617,8 +638,8 @@ export default function FamilyPortal() {
                         style={{
                           padding: '0.75rem 1rem',
                           borderRadius: '10px',
-                          border: act.checked ? '1px solid var(--health)' : '1px solid rgba(255,255,255,0.04)',
-                          background: act.checked ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.01)',
+                          border: act.checked ? '1px solid var(--health)' : '1px solid var(--border)',
+                          background: act.checked ? 'rgba(16,185,129,0.04)' : 'transparent',
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '0.4rem'
@@ -634,7 +655,7 @@ export default function FamilyPortal() {
                               {act.checked ? '✓' : '○'}
                             </span>
                             <span style={{ 
-                              color: act.checked ? '#ffffff' : 'var(--text-muted)', 
+                              color: act.checked ? 'var(--text-light)' : 'var(--text-muted)', 
                               fontWeight: 600,
                               fontSize: '0.88rem' 
                             }}>
@@ -672,7 +693,7 @@ export default function FamilyPortal() {
               
               {/* Medication Compliance Card */}
               <div className="card" style={{ margin: 0, padding: '1.75rem', borderLeft: '5px solid var(--primary)' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
                   💊 {lang === 'zh' ? '用药核对清单' : 'Medication Intake & Compliance'}
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -694,7 +715,7 @@ export default function FamilyPortal() {
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>🕒 {med.time}</span>
-                            <strong style={{ color: '#ffffff' }}>{med.name}</strong>
+                            <strong style={{ color: 'var(--text-light)' }}>{med.name}</strong>
                           </div>
                           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.1rem' }}>
                             {lang === 'zh' ? '剂量：' : 'Dose: '} {med.dose}
@@ -726,7 +747,7 @@ export default function FamilyPortal() {
 
               {/* Vitals Monitor Card with SVG Graphs */}
               <div className="card" style={{ margin: 0, padding: '1.75rem' }}>
-                <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
+                <h3 style={{ fontSize: '1.15rem', color: 'var(--text-light)', marginBottom: '1.25rem', fontFamily: 'Outfit, sans-serif' }}>
                   🩺 {lang === 'zh' ? '长者日常生命体征实时监测' : 'Vitals Signs Monitor Stream'}
                 </h3>
                 
@@ -756,7 +777,7 @@ export default function FamilyPortal() {
                   <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
                     📈 {lang === 'zh' ? '健康数据波段动态趋势' : 'Vital Signs Graphs Trend'}
                   </h4>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ background: 'rgba(10, 186, 181, 0.04)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
                       <span>{lang === 'zh' ? '收缩压/舒张压 (mmHg)' : 'BP Trends (mmHg)'}</span>
                       <span>{lang === 'zh' ? '血糖波动 (mmol/L)' : 'Glucose Trends (mmol/L)'}</span>
@@ -817,7 +838,7 @@ export default function FamilyPortal() {
             {/* Live Care Photo Gallery */}
             <div style={{ gridColumn: '1 / -1', marginTop: '2rem' }}>
               <div className="card" style={{ padding: '1.75rem', borderLeft: '4px solid #3b82f6', background: 'rgba(30, 41, 59, 0.4)' }}>
-                <h3 style={{ fontSize: '1.2rem', color: '#ffffff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit' }}>
+                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-light)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Outfit' }}>
                   📸 {lang === 'zh' ? '实时服务照护相册' : lang === 'bm' ? 'Galeri Foto Penjagaan Langsung' : 'Live Daily Care Photo Gallery'}
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -913,7 +934,7 @@ export default function FamilyPortal() {
                           boxShadow: isActive ? '0 0 10px var(--primary)' : isDone ? '0 0 8px var(--health)' : 'none'
                         }}></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: isActive ? 'var(--primary)' : isDone ? 'var(--health)' : '#ffffff', fontSize: '0.9rem' }}>
+                          <strong style={{ color: isActive ? 'var(--primary)' : isDone ? 'var(--health)' : 'var(--text-light)', fontSize: '0.9rem' }}>
                             {idx + 1}. {step.title} / {step.zh}
                           </strong>
                           {isDone && <span style={{ color: 'var(--health)', fontSize: '0.75rem' }}>✓ Done</span>}
@@ -997,7 +1018,7 @@ export default function FamilyPortal() {
                       paddingBottom: '0.85rem' 
                     }}>
                       <div>
-                        <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ffffff' }}>
+                        <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--text-light)' }}>
                           BP: {v.bp} &bull; Sugar: {v.sugar}
                         </span>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
@@ -1019,7 +1040,7 @@ export default function FamilyPortal() {
                   <div className="card" style={{ borderLeft: '5px solid var(--accent)', background: 'linear-gradient(90deg, rgba(245,158,11,0.04) 0%, rgba(30,41,59,0.5) 100%)', margin: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
                       <ShieldAlert size={22} style={{ color: 'var(--accent)' }} />
-                      <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#ffffff' }}>Doctor's Diagnosis & Note / 医生诊断记录</h3>
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-light)' }}>Doctor's Diagnosis & Note / 医生诊断记录</h3>
                     </div>
                     <div style={{ 
                       fontSize: '0.9rem', 
@@ -1042,7 +1063,7 @@ export default function FamilyPortal() {
 
                   {/* Uploaded Materials Grid */}
                   <div className="card" style={{ margin: 0 }}>
-                    <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.15rem', color: '#ffffff' }}>
+                    <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.15rem', color: 'var(--text-light)' }}>
                       Uploaded Receipts & Prescriptions / 诊疗材料与收据
                     </h3>
                     <div style={{ display: 'flex', gap: '1rem' }}>
@@ -1220,6 +1241,110 @@ export default function FamilyPortal() {
                   style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', background: '#ec4899', color: '#fff', border: 'none', fontWeight: 700 }}
                 >
                   🖨️ Print / Save PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showEscortReportModal && activeSession && (
+        <div className="printable-modal-wrapper" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(11, 19, 41, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '2rem'
+        }}>
+          <div className="card animate-fade-in printable-report" style={{ maxWidth: '640px', width: '100%', padding: '3rem', background: '#ffffff', color: '#1e293b', border: 'none', borderRadius: '16px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--primary)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.8rem' }}>🏥</span>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.25rem', fontFamily: 'Outfit' }}>Care Connect Hub</h3>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase' }}>Daily Medical Escort Report</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowEscortReportModal(false)}
+                className="no-print"
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ fontSize: '0.88rem', lineHeight: 1.5 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '10px' }}>
+                <div><strong>Patient Name (患者姓名):</strong> {activeSession.patientName}</div>
+                <div><strong>Patient Age (患者年龄):</strong> {activeSession.patientAge} Yrs</div>
+                <div><strong>Caregiver (专属陪诊师):</strong> {assignedCaregiver}</div>
+                <div><strong>Report Date (日志日期):</strong> {activeSession.dateString || activeSession.lastUpdated || '2026-06-05'}</div>
+                <div style={{ gridColumn: '1 / -1' }}><strong>Medical Facility (就诊医院):</strong> {activeSession.hospital} ({activeSession.department})</div>
+              </div>
+
+              {/* Progress Timeline */}
+              <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>1. Escort Milestones Timeline / 诊疗服务进度</h4>
+              <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {[
+                  { title: 'Patient Met', zh: '已接诊患者', desc: 'Companion met client at the outpatient lobby.' },
+                  { title: 'Clinic Queuing', zh: '排队候诊中', desc: 'Registered and queuing outside the consultation room.' },
+                  { title: 'Appointment Ongoing', zh: '医生诊疗中', desc: 'Active clinical consultation with doctor.' },
+                  { title: 'Payment/Medicine', zh: '代缴费代取药', desc: 'Clearing hospital bills and dispensing prescriptions.' },
+                  { title: 'Check-out/Transfer', zh: '就诊结束送回', desc: 'Outpatient checkout complete, returning patient home.' }
+                ].map((step, idx) => {
+                  const isDone = idx < activeSession.statusIndex;
+                  const isActive = idx === activeSession.statusIndex;
+                  return (
+                    <li key={idx} style={{ color: isDone ? '#10b981' : isActive ? 'var(--primary)' : '#64748b' }}>
+                      <strong>[{isDone ? '✓ Completed' : isActive ? '● Ongoing' : 'Pending'}] {step.title} ({step.zh})</strong>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{step.desc}</div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Diagnosis & Notes */}
+              <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>2. Doctor's Diagnosis & Notes / 医生诊断与交代事项</h4>
+              <p style={{ margin: '0 0 1.5rem 0', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', color: '#334155', fontStyle: activeSession.doctorNote ? 'normal' : 'italic' }}>
+                {activeSession.doctorNote || 'No diagnosis or directives logged by the companion.'}
+              </p>
+
+              {/* Revisit Date */}
+              <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>3. Revisit Recommendation / 建议复诊日期</h4>
+              <p style={{ margin: '0 0 1.5rem 0', fontWeight: 'bold', color: 'var(--accent-dark)' }}>
+                📅 {activeSession.revisitDate || 'No follow-up revisit recommended.'}
+              </p>
+
+              {/* Attached Photos */}
+              <h4 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem', color: '#1e293b', marginBottom: '0.75rem' }}>4. Attached Medical Receipts & Documents / 上传单据材料</h4>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                {activeSession.uploadedPhotos && activeSession.uploadedPhotos.filter((p: string) => !!p).length > 0 ? (
+                  activeSession.uploadedPhotos.filter((p: string) => !!p).map((photo: string, index: number) => (
+                    <div key={index} style={{ width: '120px', height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                      <img src={photo} alt={`Medical Document ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No files or photos uploaded.</p>
+                )}
+              </div>
+
+              <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr', marginTop: '1.5rem' }}>
+                <button 
+                  onClick={() => {
+                    window.print();
+                  }}
+                  className="btn btn-primary"
+                  style={{ width: '100%', background: 'var(--primary)', border: 'none', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700, borderRadius: '8px', padding: '0.8rem 0' }}
+                >
+                  🖨️ {lang === 'zh' ? '打印/导出PDF' : lang === 'bm' ? 'Cetak/Eksport PDF' : 'Print/Export PDF'}
                 </button>
               </div>
             </div>

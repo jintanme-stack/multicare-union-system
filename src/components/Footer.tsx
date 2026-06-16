@@ -42,18 +42,17 @@ export default function Footer() {
 
   const t = translations[lang] || translations.en;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !message) return;
 
-    const inquiries = store.getInquiries();
     const newInquiry = {
       id: 'INQ-' + Math.floor(100 + Math.random() * 900),
       name,
       contact: email,
       message
     };
-    store.setInquiries([newInquiry, ...inquiries]);
+    await (store as any).appendInquiry(newInquiry);
     
     setName('');
     setEmail('');
@@ -64,20 +63,10 @@ export default function Footer() {
   };
 
   return (
-    <footer style={{
-      background: 'linear-gradient(to bottom, #f0fbfb 0%, #ffffff 100%)',
-      borderTop: '1px solid rgba(10, 186, 181, 0.15)',
-      padding: '4rem 2rem 2rem 2rem',
-      color: '#475569',
-      fontSize: '0.9rem'
-    }}>
-      <div style={{
+    <footer className="main-footer">
+      <div className="footer-grid" style={{
         maxWidth: '1200px',
-        margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: '1.2fr 0.8fr 1fr',
-        gap: '3rem',
-        marginBottom: '3rem'
+        margin: '0 auto'
       }}>
         {/* About column */}
         <div>
@@ -104,9 +93,18 @@ export default function Footer() {
             {footerInfo.desc || t.footer.desc}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: '#475569' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={16} style={{ color: '#0abab5' }} /> {footerInfo.address}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Phone size={16} style={{ color: '#0abab5' }} /> {footerInfo.phone}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Mail size={16} style={{ color: '#0abab5' }} /> {footerInfo.email}</span>
+            <span style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <MapPin size={16} style={{ color: '#0abab5', flexShrink: 0, marginTop: '2px' }} />
+              <span style={{ wordBreak: 'break-word' }}>{footerInfo.address}</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Phone size={16} style={{ color: '#0abab5', flexShrink: 0 }} />
+              <span>{footerInfo.phone}</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Mail size={16} style={{ color: '#0abab5', flexShrink: 0 }} />
+              <span style={{ wordBreak: 'break-all' }}>{footerInfo.email}</span>
+            </span>
           </div>
         </div>
 
@@ -141,7 +139,9 @@ export default function Footer() {
                 background: '#ffffff',
                 color: '#1e293b',
                 fontSize: '0.85rem',
-                outline: 'none'
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -157,7 +157,9 @@ export default function Footer() {
                 background: '#ffffff',
                 color: '#1e293b',
                 fontSize: '0.85rem',
-                outline: 'none'
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -174,7 +176,9 @@ export default function Footer() {
                 color: '#1e293b',
                 fontSize: '0.85rem',
                 resize: 'none',
-                outline: 'none'
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -186,7 +190,9 @@ export default function Footer() {
                 padding: '0.5rem',
                 fontSize: '0.82rem',
                 borderRadius: '6px',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                width: '100%',
+                boxSizing: 'border-box'
               }}
             >
               <Send size={14} /> {lang === 'zh' ? '提交咨询给后台' : lang === 'bm' ? 'Hantar Pertanyaan' : 'Submit Query to Admin'}

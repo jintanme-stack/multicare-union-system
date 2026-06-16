@@ -86,7 +86,7 @@ h1, h2, h3, h4, h5 {
 .sidebar {
   width: 280px;
   background-color: var(--bg-sidebar);
-  color: var(--text-light);
+  color: #ffffff;
   padding: 2.5rem 1.5rem;
   display: flex;
   flex-direction: column;
@@ -101,7 +101,7 @@ h1, h2, h3, h4, h5 {
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
   font-size: 1.3rem;
-  color: var(--text-light);
+  color: #ffffff;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -117,7 +117,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .sidebar-link {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.75);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.95rem;
@@ -131,13 +131,13 @@ h1, h2, h3, h4, h5 {
 }
 
 .sidebar-link:hover {
-  color: var(--text-light);
-  background-color: rgba(255,255,255,0.04);
+  color: #ffffff;
+  background-color: rgba(255,255,255,0.08);
   transform: translateX(4px);
 }
 
 .sidebar-link.active {
-  color: var(--text-light);
+  color: #ffffff;
   background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
   box-shadow: 0 4px 14px var(--primary-glow);
   border: 1px solid rgba(255,255,255,0.1);
@@ -476,14 +476,16 @@ tr:last-child td {
   display: none !important;
 }
 
-@media (max-width: 968px) {
+@media (max-width: 1200px) {
   .desktop-nav {
     display: none !important;
   }
   .mobile-toggle {
     display: block !important;
   }
-  
+}
+
+@media (max-width: 968px) {
   .app-container {
     flex-direction: column !important;
   }
@@ -744,3 +746,428 @@ section.calendar-week-grid, section.calendar-days-grid,
     grid-template-columns: 1fr;
   }
 }
+
+/* Contrast overrides for dark sidebar */
+.sidebar h1, .sidebar h2, .sidebar h3, .sidebar h4, .sidebar h5, .sidebar h6 {
+  color: #ffffff !important;
+}
+.sidebar p, .sidebar span, .sidebar label {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+.sidebar strong {
+  color: #ffffff !important;
+}
+
+/* Premium Holographic Card Component - Responsive Design */
+.union-member-card {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1.586; /* Standard credit card aspect ratio */
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0b1329 100%);
+  color: #ffffff;
+  padding: 5.5cqw 6cqw;
+  border-radius: 4.5cqw;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 1;
+}
+
+/* Card in Admin modal has slightly different gradient */
+.union-member-card.admin-theme {
+  background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.union-member-card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.08) 50%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.union-member-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
+}
+
+.union-member-card-title {
+  color: #ffffff !important;
+  font-size: clamp(12px, 3.6cqw, 16px);
+  font-weight: 700;
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.2;
+}
+
+.union-member-card-subtitle {
+  font-size: clamp(8px, 2.4cqw, 11px);
+  color: var(--accent) !important;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  display: block;
+  margin-top: 0.5cqw;
+}
+
+.union-member-card-logo-container {
+  display: flex;
+  gap: 1.5cqw;
+  align-items: center;
+}
+
+.union-member-card-logo {
+  width: clamp(20px, 6.5cqw, 28px) !important;
+  height: clamp(20px, 6.5cqw, 28px) !important;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.2);
+  background-color: white;
+  padding: 0.2cqw;
+}
+
+.union-member-card-logo.aplus {
+  background-color: #0d162d;
+  object-fit: contain;
+}
+
+.union-member-card-body {
+  display: flex;
+  gap: 3.6cqw;
+  align-items: center;
+  margin: 1.5cqw 0;
+  position: relative;
+  z-index: 2;
+}
+
+.union-member-card-photo-frame {
+  width: 14cqw;
+  height: 17cqw;
+  background-color: #1e293b;
+  border: 0.45cqw solid var(--accent);
+  border-radius: 1.3cqw;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.union-member-card-photo-tag {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(245, 158, 11, 0.9);
+  color: #000000 !important;
+  font-size: clamp(5px, 1.2cqw, 7px);
+  font-weight: bold;
+  text-align: center;
+  padding: 0.2cqw 0;
+}
+
+.union-member-card-info-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+  min-width: 0;
+}
+
+.union-member-card-label {
+  font-size: clamp(7px, 2.2cqw, 10px);
+  color: rgba(255,255,255,0.6) !important;
+  text-transform: uppercase;
+  display: block;
+  line-height: 1;
+  margin-bottom: 0.2cqw;
+}
+
+.union-member-card-val-id {
+  font-size: clamp(12px, 4.2cqw, 18px);
+  font-weight: bold;
+  font-family: 'monospace';
+  color: #ffffff !important;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  display: block;
+}
+
+.union-member-card-val-spec {
+  font-size: clamp(9px, 2.6cqw, 12px);
+  font-weight: 700;
+  color: var(--accent) !important;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.union-member-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.5cqw;
+  position: relative;
+  z-index: 2;
+}
+
+.union-member-card-footer-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.union-member-card-val-text {
+  font-size: clamp(9px, 3cqw, 13px);
+  font-weight: 700;
+  color: #ffffff !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.union-member-card-val-mono {
+  font-size: clamp(9px, 3cqw, 13px);
+  font-weight: 700;
+  color: #ffffff !important;
+  font-family: 'monospace';
+  white-space: nowrap;
+  display: block;
+}
+
+.union-member-card-status-stamp {
+  border: 0.34cqw solid #10b981;
+  color: #34d399 !important;
+  padding: 0.5cqw 1.2cqw;
+  border-radius: 9999px;
+  font-size: clamp(8px, 2.2cqw, 11px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: rgba(16, 185, 129, 0.15);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5cqw;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  transform: rotate(-3deg);
+  flex-shrink: 0;
+}
+
+.union-member-card-status-stamp.admin-style {
+  border: 0.45cqw solid var(--health);
+  color: var(--health) !important;
+  border-radius: 4px;
+  font-size: clamp(8px, 2.2cqw, 11px);
+  transform: rotate(-5deg);
+  background-color: var(--bg-main);
+  padding: 0.4cqw 1cqw;
+}
+
+/* Global Footer Responsive Grid Styles */
+.main-footer {
+  background: linear-gradient(to bottom, #f0fbfb 0%, #ffffff 100%);
+  border-top: 1px solid rgba(10, 186, 181, 0.15);
+  padding: 4rem 2rem 2rem 2rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+  .main-footer {
+    padding: 3rem 1.5rem 1.5rem 1.5rem !important;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+}
+
+/* Blog Reader Modal Responsive Styles */
+.blog-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-overlay {
+    padding: 0.5rem;
+  }
+}
+
+.blog-modal-container {
+  max-width: 850px;
+  width: 100%;
+  max-height: 90vh;
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-container {
+    max-height: 96vh;
+    border-radius: 16px;
+  }
+}
+
+.blog-modal-header {
+  height: 320px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-header {
+    height: 180px;
+  }
+}
+
+.blog-modal-header-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.75) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2.5rem;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-header-overlay {
+    padding: 1.25rem;
+  }
+}
+
+.blog-modal-title {
+  color: #ffffff;
+  font-size: 2.1rem;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.25;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 640px) {
+  .blog-modal-title {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.blog-modal-meta {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-meta {
+    gap: 0.75rem;
+    font-size: 0.7rem;
+  }
+}
+
+.blog-modal-body {
+  padding: 2.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-body {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+.blog-modal-footer {
+  padding: 1.25rem 2.5rem;
+  border-top: 1px solid var(--border);
+  background-color: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .blog-modal-footer {
+    padding: 1rem 1.25rem;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+}
+
+/* Responsive Form Grid */
+.responsive-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Agreement Portal Responsive Styling */
+.agreement-section {
+  padding: 4rem 2rem;
+  background: radial-gradient(circle at center, rgba(37,99,235,0.12) 0%, transparent 60%);
+}
+
+.agreement-card {
+  padding: 3rem;
+}
+
+@media (max-width: 640px) {
+  .agreement-section {
+    padding: 2rem 1rem !important;
+  }
+  .agreement-card {
+    padding: 1.5rem 1rem !important;
+  }
+}
+
+
