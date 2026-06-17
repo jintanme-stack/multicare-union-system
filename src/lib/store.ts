@@ -623,19 +623,25 @@ const getPartitionedKey = (key: string): string => {
 
 // Pull synchronized data from Supabase
 export const pullFromCloud = async () => {
-  if (!isClient() || !isSupabaseConfigured()) return;
+  if (!isClient()) return;
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured (missing env variables)');
+  }
   try {
     const { data, error } = await supabase.from('mcs_store').select('*');
-    if (!error && data) {
+    if (error) {
+      console.error('🔄 MCSA Cloud Sync pull error:', error.message);
+      throw new Error(error.message);
+    }
+    if (data) {
       data.forEach((row) => {
         localStorage.setItem(row.key, JSON.stringify(row.value));
       });
       console.log('🔄 MCSA Cloud Sync: Pulled and synced data from Supabase.');
-    } else if (error) {
-      console.error('🔄 MCSA Cloud Sync pull error:', error.message);
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('🔄 MCSA Cloud Sync pull exception:', err);
+    throw err;
   }
 };
 

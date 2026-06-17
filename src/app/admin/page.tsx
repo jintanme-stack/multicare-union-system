@@ -117,6 +117,7 @@ export default function AdminPage() {
   const [photoTab, setPhotoTab] = useState<'upload' | 'url'>('upload');
   const [photoFileName, setPhotoFileName] = useState('');
   const [photoFileSize, setPhotoFileSize] = useState('');
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     const initData = () => {
@@ -150,7 +151,11 @@ export default function AdminPage() {
     // Pull fresh data from cloud in background and refresh UI states
     store.pullFromCloud().then(() => {
       initData();
-    }).catch((e) => console.error("Admin pull error:", e));
+      setSyncError(null);
+    }).catch((e) => {
+      console.error("Admin pull error:", e);
+      setSyncError(e.message || String(e));
+    });
 
     const loggedEmail = localStorage.getItem('mcsa_logged_admin_email');
     if (!loggedEmail) {
@@ -1131,6 +1136,19 @@ export default function AdminPage() {
 
       {/* Main Workspace */}
       <main className="workspace animate-fade-in">
+        {syncError && (
+          <div style={{ padding: '1rem 1.5rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.35)', borderRadius: '12px', color: '#fca5a5', marginBottom: '2rem', fontSize: '0.88rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.95rem' }}>
+              ⚠️ Cloud Sync Failure / 数据库同步失败:
+            </strong>
+            <span>{syncError}</span>
+            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginTop: '0.2rem' }}>
+              If you are using Brave browser or an ad-blocker (e.g. uBlock Origin), please disable it for this website, as it may block queries to the Supabase database.
+              <br />
+              如果您正在使用 Brave 浏览器或广告屏蔽插件，请对本站予以放行，否则可能拦截向数据库发送的同步请求。
+            </span>
+          </div>
+        )}
         
         {activeTab === 'overview' && (
           <div>
@@ -1358,14 +1376,17 @@ export default function AdminPage() {
               <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ffffff' }}>Union Membership Registry Vetting</h2>
               <button 
                 onClick={() => { 
+                  setSyncError(null);
                   store.pullFromCloud()
                     .then(() => {
                       setPendingMembers(store.getPendingMembers()); 
+                      setSyncError(null);
                       alert('Vetting queue refreshed from cloud! / 申请列表已同步刷新！'); 
                     })
                     .catch((err) => {
                       setPendingMembers(store.getPendingMembers());
-                      alert('Local refresh complete / 本地列表已刷新');
+                      setSyncError(err.message || String(err));
+                      alert('Sync failed / 同步失败: ' + (err.message || String(err)));
                     });
                 }} 
                 className="btn btn-outline" 
@@ -1460,14 +1481,17 @@ export default function AdminPage() {
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <button 
                   onClick={() => { 
+                    setSyncError(null);
                     store.pullFromCloud()
                       .then(() => {
                         setUnionMembers(store.getUnionMembers()); 
+                        setSyncError(null);
                         alert('Union member list refreshed from cloud! / 盟友花名册已同步刷新！'); 
                       })
                       .catch((err) => {
                         setUnionMembers(store.getUnionMembers());
-                        alert('Local refresh complete / 本地名册已刷新');
+                        setSyncError(err.message || String(err));
+                        alert('Sync failed / 同步失败: ' + (err.message || String(err)));
                       });
                   }} 
                   className="btn btn-outline" 
